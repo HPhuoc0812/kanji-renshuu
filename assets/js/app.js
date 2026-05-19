@@ -17,6 +17,8 @@ const resetBtn = document.getElementById("resetBtn");
 const fileInfo = document.getElementById("fileInfo");
 const errorMessage = document.getElementById("errorMessage");
 
+const DATA_CACHE_KEY = "kanji-renshuu-data-v1";
+
 let kanjiData = [];
 let quizItems = [];
 let currentIndex = 0;
@@ -60,6 +62,46 @@ function shuffle(array) {
   for (let i = array.length - 1; i > 0; i -= 1) {
     const j = getRandomInt(i + 1);
     [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
+function setKanjiData(data, lessonInfo) {
+  kanjiData = data;
+  hasLessonInfo = lessonInfo;
+}
+
+function saveKanjiDataToStorage() {
+  try {
+    localStorage.setItem(DATA_CACHE_KEY, JSON.stringify({
+      savedAt: new Date().toISOString(),
+      hasLessonInfo,
+      data: kanjiData
+    }));
+  } catch {
+    // App vẫn chạy nếu trình duyệt chặn localStorage hoặc bộ nhớ đầy.
+  }
+}
+
+function loadKanjiDataFromStorage() {
+  try {
+    const raw = localStorage.getItem(DATA_CACHE_KEY);
+
+    if (!raw) {
+      return false;
+    }
+
+    const cached = JSON.parse(raw);
+
+    if (!Array.isArray(cached.data) || cached.data.length === 0) {
+      return false;
+    }
+
+    setKanjiData(cached.data, Boolean(cached.hasLessonInfo));
+    hideError();
+    fileInfo.textContent = `Đang dùng dữ liệu đã lưu offline (${kanjiData.length} dòng). ${hasLessonInfo ? "Có hỗ trợ lọc theo cột Bài." : "Không có cột Bài."}`;
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -204,7 +246,9 @@ async function parseRemoteUrl(url) {
     const response = await fetch(normalizedUrl);
 
     if (!response.ok) {
-      showError(`Không tải được file từ URL. Mã: ${response.status}`);
+      if (!loadKanjiDataFromStorage()) {
+        showError(`Không tải được file từ URL. Mã: ${response.status}`);
+      }
       return;
     }
 
@@ -231,8 +275,10 @@ async function parseRemoteUrl(url) {
     const buffer = await response.arrayBuffer();
     const text = new TextDecoder("utf-8").decode(buffer);
     loadCsvText(text);
-  } catch (err) {
-    showError(`Lỗi tải file từ URL: ${err.message}`);
+  } catch {
+    if (!loadKanjiDataFromStorage()) {
+      showError("Không có mạng và chưa có dữ liệu offline. Hãy mở app khi có mạng một lần để lưu dữ liệu.");
+    }
   }
 }
 
@@ -280,17 +326,18 @@ function loadDataFromJson(json) {
     return;
   }
 
-  kanjiData = data;
-  hasLessonInfo = Boolean(lessonKey);
+  setKanjiData(data, Boolean(lessonKey));
+  saveKanjiDataToStorage();
   hideError();
-  fileInfo.textContent = `Đã tải ${kanjiData.length} dòng dữ liệu. ${hasLessonInfo ? "Có hỗ trợ lọc theo cột Bài." : "Không tìm thấy cột Bài trong file."}`;
+  fileInfo.textContent = `Đã tải ${kanjiData.length} dòng dữ liệu và lưu để dùng offline. ${hasLessonInfo ? "Có hỗ trợ lọc theo cột Bài." : "Không tìm thấy cột Bài trong file."}`;
 }
 
 function autoLoadDefaultUrl() {
   const defaultUrl = urlInput.value.trim();
 
-  if (defaultUrl) {
-    hideError();
+  loadKanjiDataFromStorage();
+
+  if (defaultUrl && navigator.onLine) {
     parseRemoteUrl(defaultUrl);
   }
 }
@@ -306,7 +353,7 @@ function buildQuiz() {
   const hasTo = Number.isFinite(to) && to > 0;
 
   if ((hasFrom || hasTo) && !hasLessonInfo) {
-    showError("File không có cột Bài nên không thể lọc theo phạm vi bài.");
+    showError("Dữ liệu hiện tại không có cột Bài nên không thể lọc theo phạm vi bài.");
     return false;
   }
 
@@ -500,6 +547,7 @@ resetBtn.addEventListener("click", () => {
   autoLoadDefaultUrl();
 });
 
+window.addEventListener("online", autoLoadDefaultUrl);
 document.addEventListener("DOMContentLoaded", autoLoadDefaultUrl);
 
 if ("serviceWorker" in navigator) {
