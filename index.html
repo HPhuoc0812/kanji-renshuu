@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#2563eb" />
+  <meta name="description" content="Luyện tập Kanji bằng file Excel, CSV hoặc Google Sheets." />
+  <title>Kanji Renshuu - Luyện tập Kanji</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>漢字練習</h1>
+      <p>Luyện tập Kanji bằng local web app. Chọn file Excel/CSV hoặc Google Sheets và bắt đầu quiz ngay.</p>
+    </header>
+
+    <section class="card">
+      <div class="grid grid-2">
+        <div>
+          <label for="fileInput">File dữ liệu Kanji</label>
+          <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" />
+        </div>
+        <div>
+          <label for="modeSelect">Chế độ luyện tập</label>
+          <select id="modeSelect">
+            <option value="reading-to-kanji">Nhìn Âm Hán -> Chọn Kanji</option>
+            <option value="kanji-to-reading">Nhìn Kanji -> Chọn Âm Hán</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-2 form-row">
+        <div>
+          <label for="questionCount">Số câu luyện tập</label>
+          <input id="questionCount" type="number" value="10" min="1" max="100" />
+        </div>
+        <div class="align-bottom">
+          <button id="startBtn">Bắt đầu luyện tập</button>
+        </div>
+      </div>
+
+      <div class="grid grid-2 form-row">
+        <div>
+          <label for="lessonFrom">Từ bài</label>
+          <input id="lessonFrom" type="number" min="1" placeholder="Không bắt buộc" />
+        </div>
+        <div>
+          <label for="lessonTo">Đến bài</label>
+          <input id="lessonTo" type="number" min="1" placeholder="Không bắt buộc" />
+        </div>
+      </div>
+
+      <div class="grid grid-2 form-row">
+        <div>
+          <label for="urlInput">URL file Excel / CSV / Google Sheets</label>
+          <input id="urlInput" type="text" value="https://docs.google.com/spreadsheets/d/1Lsvnce88zkeASGQPzPJXcjfg2yBjx1b2yMlloLmDy7I/edit?gid=0#gid=0" />
+        </div>
+        <div class="align-bottom">
+          <button id="importBtn" class="secondary">Import từ URL</button>
+        </div>
+      </div>
+
+      <div id="fileInfo" class="status">Đang tải dữ liệu từ Google Sheets...</div>
+      <div id="errorMessage" class="alert hidden"></div>
+    </section>
+
+    <section id="quizArea" class="card hidden">
+      <div class="status" id="quizStatus"></div>
+      <div class="question-box">
+        <h2 id="questionPrompt">Câu hỏi sẽ xuất hiện ở đây</h2>
+        <div class="options" id="options"></div>
+      </div>
+      <div class="button-row">
+        <button id="confirmBtn" class="secondary hidden">Xác nhận</button>
+        <button id="nextBtn" class="secondary hidden">Câu tiếp theo</button>
+        <button id="resetBtn" class="secondary">Làm lại</button>
+      </div>
+      <div class="footer" id="scoreInfo"></div>
+    </section>
+  </div>
+
+  <script src="libs/xlsx.full.min.js"></script>
+  <script src="assets/js/app.js" defer></script>
+</body>
+</html>
