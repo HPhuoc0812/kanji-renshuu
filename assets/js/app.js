@@ -456,6 +456,7 @@ function renderQuestion() {
 
   shuffle(choices);
   optionsContainer.innerHTML = "";
+  optionsContainer.classList.toggle("kanji-options", mode === "reading-to-kanji");
   selectedChoice = null;
   selectedButton = null;
 
