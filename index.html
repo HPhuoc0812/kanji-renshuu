@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#2563eb" />
+  <meta name="theme-color" content="#0f766e" />
   <meta name="description" content="Luyện tập Kanji bằng file Excel, CSV hoặc Google Sheets." />
   <title>Kanji Renshuu - Luyện tập Kanji</title>
   <link rel="manifest" href="manifest.webmanifest" />
@@ -11,13 +11,23 @@
   <link rel="stylesheet" href="assets/css/styles.css" />
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>漢字練習</h1>
-      <p>Luyện tập Kanji bằng local web app. Chọn file Excel/CSV hoặc Google Sheets và bắt đầu quiz ngay.</p>
+  <main class="container">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Kanji Renshuu</p>
+        <h1>漢字練習</h1>
+        <p>Luyện Kanji bằng Excel, CSV hoặc Google Sheets. Chọn phạm vi bài, vào quiz, và ôn đúng phần mình cần nhớ.</p>
+      </div>
     </header>
 
-    <section class="card">
+    <section class="card setup-card">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Thiết lập</p>
+          <h2>Nguồn dữ liệu và chế độ luyện</h2>
+        </div>
+      </div>
+
       <div class="grid grid-2">
         <div>
           <label for="fileInput">File dữ liệu Kanji</label>
@@ -32,17 +42,11 @@
         </div>
       </div>
 
-      <div class="grid grid-2 form-row">
+      <div class="grid grid-3 form-row">
         <div>
-          <label for="questionCount">Số câu luyện tập</label>
+          <label for="questionCount">Số câu</label>
           <input id="questionCount" type="number" value="10" min="1" max="100" />
         </div>
-        <div class="align-bottom">
-          <button id="startBtn">Bắt đầu luyện tập</button>
-        </div>
-      </div>
-
-      <div class="grid grid-2 form-row">
         <div>
           <label for="lessonFrom">Từ bài</label>
           <input id="lessonFrom" type="number" min="1" placeholder="Không bắt buộc" />
@@ -53,34 +57,42 @@
         </div>
       </div>
 
-      <div class="grid grid-2 form-row">
+      <div class="grid url-grid form-row">
         <div>
           <label for="urlInput">URL file Excel / CSV / Google Sheets</label>
           <input id="urlInput" type="text" value="https://docs.google.com/spreadsheets/d/1Lsvnce88zkeASGQPzPJXcjfg2yBjx1b2yMlloLmDy7I/edit?gid=0#gid=0" />
         </div>
         <div class="align-bottom">
-          <button id="importBtn" class="secondary">Import từ URL</button>
+          <button id="importBtn" class="secondary" type="button">Import từ URL</button>
         </div>
+      </div>
+
+      <div class="actions">
+        <button id="startBtn" type="button">Bắt đầu luyện tập</button>
       </div>
 
       <div id="fileInfo" class="status">Đang tải dữ liệu từ Google Sheets...</div>
       <div id="errorMessage" class="alert hidden"></div>
     </section>
 
-    <section id="quizArea" class="card hidden">
-      <div class="status" id="quizStatus"></div>
+    <section id="quizArea" class="card quiz-card hidden">
+      <div class="quiz-topline">
+        <div class="status" id="quizStatus"></div>
+        <div class="footer" id="scoreInfo"></div>
+      </div>
+
       <div class="question-box">
         <h2 id="questionPrompt">Câu hỏi sẽ xuất hiện ở đây</h2>
         <div class="options" id="options"></div>
       </div>
+
       <div class="button-row">
-        <button id="confirmBtn" class="secondary hidden">Xác nhận</button>
-        <button id="nextBtn" class="secondary hidden">Câu tiếp theo</button>
-        <button id="resetBtn" class="secondary">Làm lại</button>
+        <button id="confirmBtn" class="secondary hidden" type="button">Xác nhận</button>
+        <button id="nextBtn" class="secondary hidden" type="button">Câu tiếp theo</button>
+        <button id="resetBtn" class="ghost" type="button">Làm lại</button>
       </div>
-      <div class="footer" id="scoreInfo"></div>
     </section>
-  </div>
+  </main>
 
   <script src="libs/xlsx.full.min.js"></script>
   <script src="assets/js/app.js" defer></script>

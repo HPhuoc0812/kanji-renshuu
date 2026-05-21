@@ -18,6 +18,7 @@ const fileInfo = document.getElementById("fileInfo");
 const errorMessage = document.getElementById("errorMessage");
 
 const DATA_CACHE_KEY = "kanji-renshuu-data-v1";
+const MAX_OPTION_COUNT = 4;
 
 let kanjiData = [];
 let quizItems = [];
@@ -52,6 +53,10 @@ function hideError() {
 
 function normalizeText(text) {
   return String(text || "").trim();
+}
+
+function normalizeReading(reading) {
+  return normalizeText(reading).normalize("NFC").toLocaleLowerCase("vi");
 }
 
 function getRandomInt(max) {
@@ -342,6 +347,48 @@ function autoLoadDefaultUrl() {
   }
 }
 
+function buildChoices(item, source, mode) {
+  const currentReading = normalizeReading(item.reading);
+  const choices = [item];
+  const usedDisplayValues = new Set([
+    mode === "reading-to-kanji" ? item.kanji : normalizeReading(item.reading)
+  ]);
+
+  const candidates = source.filter((candidate) => {
+    const sameKanjiAndReading = candidate.kanji === item.kanji && candidate.reading === item.reading;
+    const sameReading = normalizeReading(candidate.reading) === currentReading;
+
+    if (sameKanjiAndReading || sameReading) {
+      return false;
+    }
+
+    const displayValue = mode === "reading-to-kanji"
+      ? candidate.kanji
+      : normalizeReading(candidate.reading);
+
+    return !usedDisplayValues.has(displayValue);
+  });
+
+  shuffle(candidates);
+
+  for (const candidate of candidates) {
+    const displayValue = mode === "reading-to-kanji"
+      ? candidate.kanji
+      : normalizeReading(candidate.reading);
+
+    if (!usedDisplayValues.has(displayValue)) {
+      choices.push(candidate);
+      usedDisplayValues.add(displayValue);
+    }
+
+    if (choices.length >= MAX_OPTION_COUNT) {
+      break;
+    }
+  }
+
+  return choices;
+}
+
 function buildQuiz() {
   const total = Math.min(Math.max(1, Number(questionCountInput.value)), 100);
   const source = kanjiData.length ? kanjiData : fallbackData;
@@ -404,19 +451,8 @@ function renderQuestion() {
 
   const item = quizItems[currentIndex];
   const mode = modeSelect.value;
-  const choices = [item];
   const source = kanjiData.length ? kanjiData : fallbackData;
-
-  while (choices.length < Math.min(4, source.length)) {
-    const candidate = source[getRandomInt(source.length)];
-    const exists = choices.some(choice =>
-      choice.kanji === candidate.kanji && choice.reading === candidate.reading
-    );
-
-    if (!exists) {
-      choices.push(candidate);
-    }
-  }
+  const choices = buildChoices(item, source, mode);
 
   shuffle(choices);
   optionsContainer.innerHTML = "";
@@ -475,7 +511,7 @@ function confirmAnswer() {
     option.disabled = true;
     const matchesCorrect = modeSelect.value === "reading-to-kanji"
       ? option.textContent === item.kanji
-      : option.textContent === item.reading;
+      : normalizeReading(option.textContent) === normalizeReading(item.reading);
 
     if (matchesCorrect) {
       option.classList.add("correct");
