@@ -135,6 +135,44 @@ body {
   transform: translateY(2px);
 }
 
+.app-tabs {
+  display: inline-flex;
+  gap: 6px;
+  padding: 6px;
+  margin: 0 0 18px;
+  border: 1px solid rgba(15, 118, 110, 0.16);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 10px 28px rgba(23, 33, 31, 0.08);
+}
+
+.tab-button {
+  min-width: 156px;
+  min-height: 42px;
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+}
+
+.tab-button:hover {
+  border-color: rgba(15, 118, 110, 0.22);
+  background: rgba(15, 118, 110, 0.08);
+  box-shadow: none;
+}
+
+.tab-button.active {
+  background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(15, 118, 110, 0.2);
+}
+
+.tab-panel.hidden {
+  display: none !important;
+}
+
 .card {
   background: var(--panel);
   border: 1px solid rgba(15, 118, 110, 0.16);
@@ -224,6 +262,45 @@ input[type="file"]::-webkit-file-upload-button {
 
 .native-select {
   display: none;
+}
+
+.mode-segmented {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  min-height: 46px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field);
+}
+
+.mode-segment {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+  font-size: 0.92rem;
+  line-height: 1.25;
+  white-space: normal;
+}
+
+.mode-segment:hover {
+  border-color: rgba(15, 118, 110, 0.22);
+  background: rgba(15, 118, 110, 0.08);
+  box-shadow: none;
+}
+
+.mode-segment.active {
+  background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(15, 118, 110, 0.18);
 }
 
 .custom-select {
@@ -459,6 +536,73 @@ button:disabled {
   white-space: pre-line;
 }
 
+.compact-status {
+  margin-top: 0;
+  align-self: center;
+  white-space: nowrap;
+}
+
+.radicals-controls {
+  grid-template-columns: minmax(0, 1fr) 180px;
+}
+
+.radicals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.radical-item {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(15, 118, 110, 0.16);
+  border-radius: 8px;
+  background: var(--field);
+}
+
+.radical-symbol {
+  width: 54px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--option-bg);
+  color: var(--ink);
+  font-family: var(--kanji-font);
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.radical-details {
+  min-width: 0;
+}
+
+.radical-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.radical-meta,
+.radical-variants {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.radical-variants {
+  font-family: var(--kanji-font);
+}
+
 .quiz-topline {
   display: flex;
   justify-content: space-between;
@@ -602,6 +746,19 @@ button:disabled {
     font-size: 0.7rem;
   }
 
+  .app-tabs {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin-bottom: 16px;
+  }
+
+  .tab-button {
+    width: 100%;
+    min-width: 0;
+    padding: 10px 8px;
+  }
+
   .card {
     padding: 16px;
     margin-bottom: 16px;
@@ -620,6 +777,7 @@ button:disabled {
   .grid-2,
   .grid-3,
   .url-grid,
+  .radicals-controls,
   .options {
     grid-template-columns: 1fr;
   }
@@ -638,6 +796,16 @@ button:disabled {
     display: block;
   }
 
+  .compact-status {
+    margin-top: 8px;
+    white-space: normal;
+  }
+
+  .radicals-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
   label {
     margin-bottom: 6px;
     font-size: 0.86rem;
@@ -646,11 +814,18 @@ button:disabled {
   input[type="file"],
   select,
   .custom-select-button,
+  .mode-segmented,
   input[type="number"],
   input[type="text"] {
     min-height: 42px;
     padding: 9px 11px;
     font-size: 0.93rem;
+  }
+
+  .mode-segment {
+    min-height: 32px;
+    padding: 7px 8px;
+    font-size: 0.84rem;
   }
 
   .input-action {

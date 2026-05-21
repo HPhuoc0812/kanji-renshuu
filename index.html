@@ -26,6 +26,12 @@
       <div class="hero-mark" aria-hidden="true">練</div>
     </header>
 
+    <nav class="app-tabs" role="tablist" aria-label="Chọn khu vực học">
+      <button id="practiceTabBtn" class="tab-button active" type="button" role="tab" aria-selected="true" aria-controls="practicePanel" data-tab-target="practicePanel">Luyện tập</button>
+      <button id="radicalsTabBtn" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="radicalsPanel" data-tab-target="radicalsPanel">Tra cứu bộ thủ</button>
+    </nav>
+
+    <div id="practicePanel" class="tab-panel" role="tabpanel" aria-labelledby="practiceTabBtn" aria-hidden="false">
     <section class="card setup-card">
       <div class="section-heading">
         <div>
@@ -48,15 +54,9 @@
             <option value="reading-to-kanji">Nhìn Âm Hán -> Chọn Kanji</option>
             <option value="kanji-to-reading">Nhìn Kanji -> Chọn Âm Hán</option>
           </select>
-          <div class="custom-select" data-for="modeSelect">
-            <button id="modeSelectButton" class="custom-select-button" type="button" aria-haspopup="listbox" aria-expanded="false">
-              <span id="modeSelectText">Nhìn Âm Hán -> Chọn Kanji</span>
-              <span class="custom-select-arrow" aria-hidden="true">⌄</span>
-            </button>
-            <div id="modeSelectMenu" class="custom-select-menu hidden" role="listbox" aria-labelledby="modeSelectButton">
-              <button class="custom-select-option selected" type="button" role="option" aria-selected="true" data-value="reading-to-kanji">Nhìn Âm Hán -> Chọn Kanji</button>
-              <button class="custom-select-option" type="button" role="option" aria-selected="false" data-value="kanji-to-reading">Nhìn Kanji -> Chọn Âm Hán</button>
-            </div>
+          <div class="mode-segmented" role="group" aria-label="Chế độ luyện tập">
+            <button class="mode-segment active" type="button" data-mode-value="reading-to-kanji" aria-pressed="true">Âm Hán -> Kanji</button>
+            <button class="mode-segment" type="button" data-mode-value="kanji-to-reading" aria-pressed="false">Kanji -> Âm Hán</button>
           </div>
         </div>
       </div>
@@ -114,6 +114,34 @@
         <button id="resetBtn" class="ghost" type="button">Làm lại</button>
       </div>
     </section>
+    </div>
+
+    <section id="radicalsPanel" class="card radicals-card tab-panel hidden" role="tabpanel" aria-labelledby="radicalsTabBtn" aria-hidden="true">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">214 bộ thủ</p>
+          <h2>Tra cứu bộ thủ Kanji</h2>
+        </div>
+        <div id="radicalsCount" class="status compact-status">Đang tải...</div>
+      </div>
+
+      <div class="grid radicals-controls">
+        <div>
+          <label for="radicalsSearch">Tìm bộ thủ</label>
+          <input id="radicalsSearch" type="text" placeholder="Kanji, âm Hán hoặc nghĩa" autocomplete="off" />
+        </div>
+        <div>
+          <label for="radicalsStrokeFilter">Số nét</label>
+          <select id="radicalsStrokeFilter">
+            <option value="">Tất cả</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="radicalsGrid" class="radicals-grid" aria-live="polite"></div>
+      <div id="radicalsMessage" class="status"></div>
+    </section>
+
   </main>
 
   <script src="libs/xlsx.full.min.js"></script>

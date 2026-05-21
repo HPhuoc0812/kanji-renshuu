@@ -2,9 +2,7 @@ const fileInput = document.getElementById("fileInput");
 const urlInput = document.getElementById("urlInput");
 const importBtn = document.getElementById("importBtn");
 const modeSelect = document.getElementById("modeSelect");
-const modeSelectButton = document.getElementById("modeSelectButton");
-const modeSelectText = document.getElementById("modeSelectText");
-const modeSelectMenu = document.getElementById("modeSelectMenu");
+const modeSegmentButtons = Array.from(document.querySelectorAll("[data-mode-value]"));
 const questionCountInput = document.getElementById("questionCount");
 const maxQuestionBtn = document.getElementById("maxQuestionBtn");
 const themeToggleBtn = document.getElementById("themeToggleBtn");
@@ -21,13 +19,23 @@ const confirmBtn = document.getElementById("confirmBtn");
 const resetBtn = document.getElementById("resetBtn");
 const fileInfo = document.getElementById("fileInfo");
 const errorMessage = document.getElementById("errorMessage");
+const radicalsSearchInput = document.getElementById("radicalsSearch");
+const radicalsStrokeFilter = document.getElementById("radicalsStrokeFilter");
+const radicalsGrid = document.getElementById("radicalsGrid");
+const radicalsCount = document.getElementById("radicalsCount");
+const radicalsMessage = document.getElementById("radicalsMessage");
+const tabButtons = Array.from(document.querySelectorAll("[data-tab-target]"));
+const tabPanels = Array.from(document.querySelectorAll(".tab-panel"));
+const practicePanel = document.getElementById("practicePanel");
 
 const DATA_CACHE_KEY = "kanji-renshuu-data-v1";
 const THEME_CACHE_KEY = "kanji-renshuu-theme";
+const RADICALS_DATA_URL = "assets/data/radicals.json";
 const MAX_OPTION_COUNT = 4;
 const MAX_QUESTION_COUNT = 300;
 
 let kanjiData = [];
+let radicalsData = [];
 let quizItems = [];
 let currentIndex = 0;
 let score = 0;
@@ -77,72 +85,34 @@ function toggleTheme() {
   applyTheme(nextTheme);
 }
 
-function closeModeSelect() {
-  modeSelectMenu.classList.add("hidden");
-  modeSelectButton.setAttribute("aria-expanded", "false");
-}
+function setActiveTab(panelId) {
+  tabPanels.forEach((panel) => {
+    const isActive = panel.id === panelId;
+    panel.classList.toggle("hidden", !isActive);
+    panel.setAttribute("aria-hidden", String(!isActive));
+  });
 
-function openModeSelect() {
-  modeSelectMenu.classList.remove("hidden");
-  modeSelectButton.setAttribute("aria-expanded", "true");
+  tabButtons.forEach((button) => {
+    const isActive = button.dataset.tabTarget === panelId;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-selected", String(isActive));
+  });
 }
 
 function setModeSelectValue(value) {
-  const option = modeSelectMenu.querySelector(`[data-value="${value}"]`);
+  const hasMode = modeSegmentButtons.some(button => button.dataset.modeValue === value);
 
-  if (!option) {
+  if (!hasMode) {
     return;
   }
 
   modeSelect.value = value;
-  modeSelectText.textContent = option.textContent;
 
-  modeSelectMenu.querySelectorAll(".custom-select-option").forEach((button) => {
-    const isSelected = button.dataset.value === value;
-    button.classList.toggle("selected", isSelected);
-    button.setAttribute("aria-selected", String(isSelected));
+  modeSegmentButtons.forEach((button) => {
+    const isSelected = button.dataset.modeValue === value;
+    button.classList.toggle("active", isSelected);
+    button.setAttribute("aria-pressed", String(isSelected));
   });
-
-  modeSelect.dispatchEvent(new Event("change"));
-}
-
-function toggleModeSelect() {
-  if (modeSelectMenu.classList.contains("hidden")) {
-    openModeSelect();
-  } else {
-    closeModeSelect();
-  }
-}
-
-function handleModeSelectKeydown(event) {
-  const options = Array.from(modeSelectMenu.querySelectorAll(".custom-select-option"));
-  const selectedIndex = Math.max(0, options.findIndex(option => option.dataset.value === modeSelect.value));
-
-  if (["Enter", " "].includes(event.key)) {
-    event.preventDefault();
-    event.stopPropagation();
-    toggleModeSelect();
-    return;
-  }
-
-  if (event.key === "Escape") {
-    event.preventDefault();
-    event.stopPropagation();
-    closeModeSelect();
-    return;
-  }
-
-  if (!["ArrowDown", "ArrowUp"].includes(event.key)) {
-    return;
-  }
-
-  event.preventDefault();
-  event.stopPropagation();
-
-  const direction = event.key === "ArrowDown" ? 1 : -1;
-  const nextIndex = (selectedIndex + direction + options.length) % options.length;
-  setModeSelectValue(options[nextIndex].dataset.value);
-  openModeSelect();
 }
 
 function normalizeText(text) {
@@ -151,6 +121,122 @@ function normalizeText(text) {
 
 function normalizeReading(reading) {
   return normalizeText(reading).normalize("NFC").toLocaleLowerCase("vi");
+}
+
+function normalizeSearchText(value) {
+  return normalizeText(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("vi");
+}
+
+function getRadicalSearchText(item) {
+  return normalizeSearchText([
+    item.id,
+    item.radical,
+    item.hanViet,
+    item.meaning,
+    item.strokes,
+    ...(item.variants || [])
+  ].join(" "));
+}
+
+function populateRadicalStrokeFilter() {
+  const strokes = [...new Set(radicalsData.map(item => item.strokes))].sort((a, b) => a - b);
+
+  radicalsStrokeFilter.innerHTML = '<option value="">Tất cả</option>';
+  strokes.forEach((stroke) => {
+    const option = document.createElement("option");
+    option.value = String(stroke);
+    option.textContent = `${stroke} nét`;
+    radicalsStrokeFilter.appendChild(option);
+  });
+}
+
+function getFilteredRadicals() {
+  const query = normalizeSearchText(radicalsSearchInput.value);
+  const stroke = Number(radicalsStrokeFilter.value);
+  const hasStroke = Number.isFinite(stroke) && stroke > 0;
+
+  return radicalsData.filter((item) => {
+    if (hasStroke && item.strokes !== stroke) {
+      return false;
+    }
+
+    if (!query) {
+      return true;
+    }
+
+    return getRadicalSearchText(item).includes(query);
+  });
+}
+
+function renderRadicals() {
+  const filtered = getFilteredRadicals();
+  radicalsGrid.innerHTML = "";
+  radicalsCount.textContent = `${filtered.length} / ${radicalsData.length} bộ`;
+
+  if (filtered.length === 0) {
+    radicalsMessage.textContent = "Không tìm thấy bộ thủ phù hợp.";
+    return;
+  }
+
+  radicalsMessage.textContent = "";
+
+  filtered.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "radical-item";
+
+    const symbol = document.createElement("div");
+    symbol.className = "radical-symbol";
+    symbol.textContent = item.radical;
+
+    const details = document.createElement("div");
+    details.className = "radical-details";
+
+    const title = document.createElement("h3");
+    title.className = "radical-title";
+    title.textContent = `${item.id}. ${item.hanViet}`;
+
+    const meta = document.createElement("p");
+    meta.className = "radical-meta";
+    meta.textContent = `${item.strokes} nét - ${item.meaning}`;
+
+    details.append(title, meta);
+
+    if (item.variants?.length) {
+      const variants = document.createElement("p");
+      variants.className = "radical-variants";
+      variants.textContent = `Dạng khác: ${item.variants.join(" ")}`;
+      details.appendChild(variants);
+    }
+
+    card.append(symbol, details);
+    radicalsGrid.appendChild(card);
+  });
+}
+
+async function loadRadicalsData() {
+  try {
+    const response = await fetch(RADICALS_DATA_URL);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new Error("Empty radicals data");
+    }
+
+    radicalsData = data;
+    populateRadicalStrokeFilter();
+    renderRadicals();
+  } catch {
+    radicalsCount.textContent = "Chưa tải được";
+    radicalsMessage.textContent = "Không thể tải dữ liệu bộ thủ. Hãy chạy app qua dev server để trình duyệt cho phép đọc file JSON.";
+  }
 }
 
 function getRandomInt(max) {
@@ -614,6 +700,7 @@ function renderQuestion() {
 }
 
 function showQuizArea() {
+  setActiveTab("practicePanel");
   quizArea.classList.remove("hidden");
   renderQuestion();
   quizArea.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -701,6 +788,14 @@ function moveSelectedOption(direction) {
 }
 
 function handleKeyboardShortcut(event) {
+  if (practicePanel.classList.contains("hidden")) {
+    return;
+  }
+
+  if (event.target.closest(".app-tabs")) {
+    return;
+  }
+
   if (
     event.key === "Enter" &&
     quizArea.classList.contains("hidden")
@@ -782,34 +877,16 @@ importBtn.addEventListener("click", () => {
   parseRemoteUrl(url);
 });
 
-modeSelectButton.addEventListener("click", (event) => {
-  event.stopPropagation();
-  toggleModeSelect();
-});
-
-modeSelectButton.addEventListener("keydown", handleModeSelectKeydown);
-
-modeSelectMenu.addEventListener("click", (event) => {
-  const option = event.target.closest(".custom-select-option");
-
-  if (!option) {
-    return;
-  }
-
-  event.stopPropagation();
-  setModeSelectValue(option.dataset.value);
-  closeModeSelect();
-  modeSelectButton.focus();
-});
-
-document.addEventListener("click", (event) => {
-  if (!modeSelectMenu.classList.contains("hidden") && !event.target.closest(".custom-select")) {
-    closeModeSelect();
-  }
-});
-
 maxQuestionBtn.addEventListener("click", setMaxQuestionCount);
 themeToggleBtn.addEventListener("click", toggleTheme);
+radicalsSearchInput.addEventListener("input", renderRadicals);
+radicalsStrokeFilter.addEventListener("change", renderRadicals);
+modeSegmentButtons.forEach((button) => {
+  button.addEventListener("click", () => setModeSelectValue(button.dataset.modeValue));
+});
+tabButtons.forEach((button) => {
+  button.addEventListener("click", () => setActiveTab(button.dataset.tabTarget));
+});
 
 startBtn.addEventListener("click", () => {
   if (!kanjiData.length) {
@@ -846,7 +923,9 @@ window.addEventListener("online", autoLoadDefaultUrl);
 document.addEventListener("DOMContentLoaded", () => {
   loadThemePreference();
   setModeSelectValue(modeSelect.value);
+  setActiveTab("practicePanel");
   autoLoadDefaultUrl();
+  loadRadicalsData();
 });
 
 if ("serviceWorker" in navigator) {
