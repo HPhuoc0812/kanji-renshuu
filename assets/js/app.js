@@ -2,6 +2,9 @@ const fileInput = document.getElementById("fileInput");
 const urlInput = document.getElementById("urlInput");
 const importBtn = document.getElementById("importBtn");
 const modeSelect = document.getElementById("modeSelect");
+const modeSelectButton = document.getElementById("modeSelectButton");
+const modeSelectText = document.getElementById("modeSelectText");
+const modeSelectMenu = document.getElementById("modeSelectMenu");
 const questionCountInput = document.getElementById("questionCount");
 const maxQuestionBtn = document.getElementById("maxQuestionBtn");
 const themeToggleBtn = document.getElementById("themeToggleBtn");
@@ -72,6 +75,74 @@ function toggleTheme() {
   const nextTheme = document.body.classList.contains("dark-mode") ? "light" : "dark";
   localStorage.setItem(THEME_CACHE_KEY, nextTheme);
   applyTheme(nextTheme);
+}
+
+function closeModeSelect() {
+  modeSelectMenu.classList.add("hidden");
+  modeSelectButton.setAttribute("aria-expanded", "false");
+}
+
+function openModeSelect() {
+  modeSelectMenu.classList.remove("hidden");
+  modeSelectButton.setAttribute("aria-expanded", "true");
+}
+
+function setModeSelectValue(value) {
+  const option = modeSelectMenu.querySelector(`[data-value="${value}"]`);
+
+  if (!option) {
+    return;
+  }
+
+  modeSelect.value = value;
+  modeSelectText.textContent = option.textContent;
+
+  modeSelectMenu.querySelectorAll(".custom-select-option").forEach((button) => {
+    const isSelected = button.dataset.value === value;
+    button.classList.toggle("selected", isSelected);
+    button.setAttribute("aria-selected", String(isSelected));
+  });
+
+  modeSelect.dispatchEvent(new Event("change"));
+}
+
+function toggleModeSelect() {
+  if (modeSelectMenu.classList.contains("hidden")) {
+    openModeSelect();
+  } else {
+    closeModeSelect();
+  }
+}
+
+function handleModeSelectKeydown(event) {
+  const options = Array.from(modeSelectMenu.querySelectorAll(".custom-select-option"));
+  const selectedIndex = Math.max(0, options.findIndex(option => option.dataset.value === modeSelect.value));
+
+  if (["Enter", " "].includes(event.key)) {
+    event.preventDefault();
+    event.stopPropagation();
+    toggleModeSelect();
+    return;
+  }
+
+  if (event.key === "Escape") {
+    event.preventDefault();
+    event.stopPropagation();
+    closeModeSelect();
+    return;
+  }
+
+  if (!["ArrowDown", "ArrowUp"].includes(event.key)) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const direction = event.key === "ArrowDown" ? 1 : -1;
+  const nextIndex = (selectedIndex + direction + options.length) % options.length;
+  setModeSelectValue(options[nextIndex].dataset.value);
+  openModeSelect();
 }
 
 function normalizeText(text) {
@@ -711,6 +782,32 @@ importBtn.addEventListener("click", () => {
   parseRemoteUrl(url);
 });
 
+modeSelectButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  toggleModeSelect();
+});
+
+modeSelectButton.addEventListener("keydown", handleModeSelectKeydown);
+
+modeSelectMenu.addEventListener("click", (event) => {
+  const option = event.target.closest(".custom-select-option");
+
+  if (!option) {
+    return;
+  }
+
+  event.stopPropagation();
+  setModeSelectValue(option.dataset.value);
+  closeModeSelect();
+  modeSelectButton.focus();
+});
+
+document.addEventListener("click", (event) => {
+  if (!modeSelectMenu.classList.contains("hidden") && !event.target.closest(".custom-select")) {
+    closeModeSelect();
+  }
+});
+
 maxQuestionBtn.addEventListener("click", setMaxQuestionCount);
 themeToggleBtn.addEventListener("click", toggleTheme);
 
@@ -748,6 +845,7 @@ resetBtn.addEventListener("click", () => {
 window.addEventListener("online", autoLoadDefaultUrl);
 document.addEventListener("DOMContentLoaded", () => {
   loadThemePreference();
+  setModeSelectValue(modeSelect.value);
   autoLoadDefaultUrl();
 });
 

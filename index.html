@@ -44,10 +44,20 @@
         </div>
         <div>
           <label for="modeSelect">Chế độ luyện tập</label>
-          <select id="modeSelect">
+          <select id="modeSelect" class="native-select" tabindex="-1" aria-hidden="true">
             <option value="reading-to-kanji">Nhìn Âm Hán -> Chọn Kanji</option>
             <option value="kanji-to-reading">Nhìn Kanji -> Chọn Âm Hán</option>
           </select>
+          <div class="custom-select" data-for="modeSelect">
+            <button id="modeSelectButton" class="custom-select-button" type="button" aria-haspopup="listbox" aria-expanded="false">
+              <span id="modeSelectText">Nhìn Âm Hán -> Chọn Kanji</span>
+              <span class="custom-select-arrow" aria-hidden="true">⌄</span>
+            </button>
+            <div id="modeSelectMenu" class="custom-select-menu hidden" role="listbox" aria-labelledby="modeSelectButton">
+              <button class="custom-select-option selected" type="button" role="option" aria-selected="true" data-value="reading-to-kanji">Nhìn Âm Hán -> Chọn Kanji</button>
+              <button class="custom-select-option" type="button" role="option" aria-selected="false" data-value="kanji-to-reading">Nhìn Kanji -> Chọn Âm Hán</button>
+            </div>
+          </div>
         </div>
       </div>
 

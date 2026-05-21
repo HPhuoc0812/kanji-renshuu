@@ -222,6 +222,98 @@ input[type="file"]::-webkit-file-upload-button {
   display: none;
 }
 
+.native-select {
+  display: none;
+}
+
+.custom-select {
+  position: relative;
+}
+
+.custom-select-button {
+  width: 100%;
+  min-height: 46px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field);
+  color: var(--ink);
+  box-shadow: none;
+  font-weight: 400;
+  text-align: left;
+}
+
+.custom-select-button:hover {
+  box-shadow: none;
+  border-color: rgba(15, 118, 110, 0.45);
+}
+
+.custom-select-button[aria-expanded="true"] {
+  border-color: rgba(15, 118, 110, 0.65);
+  box-shadow: var(--control-shadow);
+}
+
+.custom-select-arrow {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.custom-select-menu {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 18px 34px rgba(23, 33, 31, 0.16);
+}
+
+.custom-select-option {
+  width: 100%;
+  min-height: 42px;
+  min-width: 0;
+  display: block;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  box-shadow: none;
+  font-weight: 600;
+  text-align: left;
+}
+
+.custom-select-option:hover,
+.custom-select-option:focus {
+  background: rgba(15, 118, 110, 0.12);
+  box-shadow: none;
+}
+
+.custom-select-option.selected {
+  background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+  color: #ffffff;
+}
+
+body.dark-mode .custom-select-menu {
+  background: #10201e;
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.35);
+}
+
+body.dark-mode .custom-select-option:hover,
+body.dark-mode .custom-select-option:focus {
+  background: rgba(45, 212, 191, 0.16);
+}
+
 input:focus,
 select:focus {
   border-color: rgba(15, 118, 110, 0.65);
@@ -553,6 +645,7 @@ button:disabled {
 
   input[type="file"],
   select,
+  .custom-select-button,
   input[type="number"],
   input[type="text"] {
     min-height: 42px;
@@ -566,7 +659,9 @@ button:disabled {
 
   button,
   button.secondary,
-  button.ghost {
+  button.ghost,
+  .custom-select-button,
+  .custom-select-option {
     width: 100%;
     min-height: 44px;
     min-width: 0;
