@@ -3,6 +3,7 @@ const urlInput = document.getElementById("urlInput");
 const importBtn = document.getElementById("importBtn");
 const modeSelect = document.getElementById("modeSelect");
 const questionCountInput = document.getElementById("questionCount");
+const maxQuestionBtn = document.getElementById("maxQuestionBtn");
 const lessonFromInput = document.getElementById("lessonFrom");
 const lessonToInput = document.getElementById("lessonTo");
 const startBtn = document.getElementById("startBtn");
@@ -19,6 +20,7 @@ const errorMessage = document.getElementById("errorMessage");
 
 const DATA_CACHE_KEY = "kanji-renshuu-data-v1";
 const MAX_OPTION_COUNT = 4;
+const MAX_QUESTION_COUNT = 300;
 
 let kanjiData = [];
 let quizItems = [];
@@ -347,6 +349,64 @@ function autoLoadDefaultUrl() {
   }
 }
 
+function getSourceData() {
+  return kanjiData.length ? kanjiData : fallbackData;
+}
+
+function getFilteredSourceData() {
+  const source = getSourceData();
+  const from = Number(lessonFromInput.value);
+  const to = Number(lessonToInput.value);
+  const hasFrom = Number.isFinite(from) && from > 0;
+  const hasTo = Number.isFinite(to) && to > 0;
+
+  if ((hasFrom || hasTo) && !hasLessonInfo) {
+    return {
+      data: [],
+      error: "Dữ liệu hiện tại không có cột Bài nên không thể lọc theo phạm vi bài."
+    };
+  }
+
+  if (hasFrom && hasTo && from > to) {
+    return {
+      data: [],
+      error: 'Giá trị "Từ bài" phải nhỏ hơn hoặc bằng "Đến bài".'
+    };
+  }
+
+  if (!hasFrom && !hasTo) {
+    return { data: [...source], error: "" };
+  }
+
+  return {
+    data: source.filter((item) => {
+      if (item.lesson === null) return false;
+      if (hasFrom && item.lesson < from) return false;
+      if (hasTo && item.lesson > to) return false;
+      return true;
+    }),
+    error: ""
+  };
+}
+
+function setMaxQuestionCount() {
+  const { data, error } = getFilteredSourceData();
+
+  if (error) {
+    showError(error);
+    return false;
+  }
+
+  if (data.length === 0) {
+    showError("Không tìm thấy mục nào phù hợp với phạm vi bài đã chọn.");
+    return false;
+  }
+
+  questionCountInput.value = Math.min(data.length, MAX_QUESTION_COUNT);
+  hideError();
+  return true;
+}
+
 function buildChoices(item, source, mode) {
   const currentReading = normalizeReading(item.reading);
   const choices = [item];
@@ -390,32 +450,12 @@ function buildChoices(item, source, mode) {
 }
 
 function buildQuiz() {
-  const total = Math.min(Math.max(1, Number(questionCountInput.value)), 100);
-  const source = kanjiData.length ? kanjiData : fallbackData;
-  let filtered = [...source];
+  const total = Math.min(Math.max(1, Number(questionCountInput.value)), MAX_QUESTION_COUNT);
+  const { data: filtered, error } = getFilteredSourceData();
 
-  const from = Number(lessonFromInput.value);
-  const to = Number(lessonToInput.value);
-  const hasFrom = Number.isFinite(from) && from > 0;
-  const hasTo = Number.isFinite(to) && to > 0;
-
-  if ((hasFrom || hasTo) && !hasLessonInfo) {
-    showError("Dữ liệu hiện tại không có cột Bài nên không thể lọc theo phạm vi bài.");
+  if (error) {
+    showError(error);
     return false;
-  }
-
-  if (hasFrom && hasTo && from > to) {
-    showError('Giá trị "Từ bài" phải nhỏ hơn hoặc bằng "Đến bài".');
-    return false;
-  }
-
-  if (hasFrom || hasTo) {
-    filtered = filtered.filter((item) => {
-      if (item.lesson === null) return false;
-      if (hasFrom && item.lesson < from) return false;
-      if (hasTo && item.lesson > to) return false;
-      return true;
-    });
   }
 
   if (filtered.length === 0) {
@@ -451,7 +491,7 @@ function renderQuestion() {
 
   const item = quizItems[currentIndex];
   const mode = modeSelect.value;
-  const source = kanjiData.length ? kanjiData : fallbackData;
+  const source = getSourceData();
   const choices = buildChoices(item, source, mode);
 
   shuffle(choices);
@@ -479,6 +519,12 @@ function renderQuestion() {
   confirmBtn.classList.remove("hidden");
   confirmBtn.disabled = false;
   nextBtn.classList.add("hidden");
+}
+
+function showQuizArea() {
+  quizArea.classList.remove("hidden");
+  renderQuestion();
+  quizArea.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function selectAnswer(choice, button) {
@@ -524,6 +570,97 @@ function confirmAnswer() {
   nextBtn.classList.remove("hidden");
 }
 
+function isTypingTarget(target) {
+  return ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName);
+}
+
+function getEnabledOptionButtons() {
+  return Array.from(optionsContainer.querySelectorAll("button:not(:disabled)"));
+}
+
+function getOptionColumnCount() {
+  const columns = window.getComputedStyle(optionsContainer).gridTemplateColumns;
+  return columns ? columns.split(" ").filter(Boolean).length : 1;
+}
+
+function moveSelectedOption(direction) {
+  const options = getEnabledOptionButtons();
+
+  if (options.length === 0 || quizArea.classList.contains("hidden")) {
+    return;
+  }
+
+  const currentIndex = selectedButton ? options.indexOf(selectedButton) : -1;
+  const columnCount = Math.max(1, getOptionColumnCount());
+  let nextIndex = currentIndex >= 0 ? currentIndex : 0;
+
+  if (direction === "ArrowRight") {
+    nextIndex = currentIndex < 0 ? 0 : Math.min(options.length - 1, currentIndex + 1);
+  } else if (direction === "ArrowLeft") {
+    nextIndex = currentIndex < 0 ? 0 : Math.max(0, currentIndex - 1);
+  } else if (direction === "ArrowDown") {
+    nextIndex = currentIndex < 0 ? 0 : Math.min(options.length - 1, currentIndex + columnCount);
+  } else if (direction === "ArrowUp") {
+    nextIndex = currentIndex < 0 ? 0 : Math.max(0, currentIndex - columnCount);
+  }
+
+  options[nextIndex].click();
+  options[nextIndex].focus({ preventScroll: true });
+}
+
+function handleKeyboardShortcut(event) {
+  if (
+    event.key === "Enter" &&
+    quizArea.classList.contains("hidden")
+  ) {
+    event.preventDefault();
+    startBtn.click();
+    return;
+  }
+
+  if (isTypingTarget(event.target)) {
+    return;
+  }
+
+  if (event.key === "r" || event.key === "R") {
+    event.preventDefault();
+    resetBtn.click();
+    return;
+  }
+
+  if (event.key === "m" || event.key === "M") {
+    event.preventDefault();
+    setMaxQuestionCount();
+    return;
+  }
+
+  if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) {
+    event.preventDefault();
+    moveSelectedOption(event.key);
+    return;
+  }
+
+  if (event.key !== "Enter") {
+    return;
+  }
+
+  event.preventDefault();
+
+  if (!nextBtn.classList.contains("hidden")) {
+    nextBtn.click();
+    return;
+  }
+
+  if (!confirmBtn.classList.contains("hidden")) {
+    if (!selectedChoice) {
+      const firstOption = getEnabledOptionButtons()[0];
+      firstOption?.click();
+    }
+
+    confirmBtn.click();
+  }
+}
+
 fileInput.addEventListener("change", (event) => {
   const file = event.target.files[0];
 
@@ -553,6 +690,8 @@ importBtn.addEventListener("click", () => {
   parseRemoteUrl(url);
 });
 
+maxQuestionBtn.addEventListener("click", setMaxQuestionCount);
+
 startBtn.addEventListener("click", () => {
   if (!kanjiData.length) {
     fileInfo.textContent = "Đang dùng dữ liệu mẫu. Bạn có thể tải file Excel/CSV để dùng dữ liệu của riêng mình.";
@@ -562,11 +701,11 @@ startBtn.addEventListener("click", () => {
     return;
   }
 
-  quizArea.classList.remove("hidden");
-  renderQuestion();
+  showQuizArea();
 });
 
 confirmBtn.addEventListener("click", confirmAnswer);
+document.addEventListener("keydown", handleKeyboardShortcut);
 
 nextBtn.addEventListener("click", () => {
   currentIndex += 1;
