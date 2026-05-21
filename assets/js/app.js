@@ -4,6 +4,7 @@ const importBtn = document.getElementById("importBtn");
 const modeSelect = document.getElementById("modeSelect");
 const questionCountInput = document.getElementById("questionCount");
 const maxQuestionBtn = document.getElementById("maxQuestionBtn");
+const themeToggleBtn = document.getElementById("themeToggleBtn");
 const lessonFromInput = document.getElementById("lessonFrom");
 const lessonToInput = document.getElementById("lessonTo");
 const startBtn = document.getElementById("startBtn");
@@ -19,6 +20,7 @@ const fileInfo = document.getElementById("fileInfo");
 const errorMessage = document.getElementById("errorMessage");
 
 const DATA_CACHE_KEY = "kanji-renshuu-data-v1";
+const THEME_CACHE_KEY = "kanji-renshuu-theme";
 const MAX_OPTION_COUNT = 4;
 const MAX_QUESTION_COUNT = 300;
 
@@ -51,6 +53,25 @@ function showError(message) {
 function hideError() {
   errorMessage.classList.add("hidden");
   errorMessage.textContent = "";
+}
+
+function applyTheme(theme) {
+  const isDark = theme === "dark";
+  document.body.classList.toggle("dark-mode", isDark);
+  themeToggleBtn.setAttribute("aria-pressed", String(isDark));
+  themeToggleBtn.title = isDark ? "Tắt dark mode" : "Bật dark mode";
+}
+
+function loadThemePreference() {
+  const savedTheme = localStorage.getItem(THEME_CACHE_KEY);
+  const fallbackTheme = window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  applyTheme(savedTheme || fallbackTheme);
+}
+
+function toggleTheme() {
+  const nextTheme = document.body.classList.contains("dark-mode") ? "light" : "dark";
+  localStorage.setItem(THEME_CACHE_KEY, nextTheme);
+  applyTheme(nextTheme);
 }
 
 function normalizeText(text) {
@@ -691,6 +712,7 @@ importBtn.addEventListener("click", () => {
 });
 
 maxQuestionBtn.addEventListener("click", setMaxQuestionCount);
+themeToggleBtn.addEventListener("click", toggleTheme);
 
 startBtn.addEventListener("click", () => {
   if (!kanjiData.length) {
@@ -724,7 +746,10 @@ resetBtn.addEventListener("click", () => {
 });
 
 window.addEventListener("online", autoLoadDefaultUrl);
-document.addEventListener("DOMContentLoaded", autoLoadDefaultUrl);
+document.addEventListener("DOMContentLoaded", () => {
+  loadThemePreference();
+  autoLoadDefaultUrl();
+});
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {

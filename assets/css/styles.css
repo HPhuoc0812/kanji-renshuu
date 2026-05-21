@@ -4,6 +4,15 @@
   --muted: #5a6b67;
   --line: #d9e4df;
   --panel: rgba(255, 255, 255, 0.9);
+  --field: #fbfefd;
+  --page-bg:
+    radial-gradient(circle at top left, rgba(216, 155, 34, 0.18), transparent 34rem),
+    linear-gradient(135deg, #f7fbf7 0%, #eef7f4 48%, #fff7e8 100%);
+  --hero-bg: linear-gradient(135deg, #13443f 0%, #0f766e 58%, #2a8f84 100%);
+  --question-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(240, 249, 246, 0.96));
+  --option-bg: #ffffff;
+  --alert-bg: #fff8e8;
+  --control-shadow: 0 0 0 4px rgba(15, 118, 110, 0.13);
   --teal: #0f766e;
   --teal-dark: #115e59;
   --gold: #d89b22;
@@ -14,6 +23,26 @@
   --kanji-font: "Noto Sans CJK JP", "Noto Sans JP", "Hiragino Sans", "Yu Gothic", Meiryo, sans-serif;
 }
 
+body.dark-mode {
+  color-scheme: dark;
+  --ink: #effaf7;
+  --muted: #a8c0ba;
+  --line: #2d514b;
+  --panel: rgba(15, 30, 28, 0.92);
+  --field: #10201e;
+  --page-bg:
+    radial-gradient(circle at top left, rgba(216, 155, 34, 0.12), transparent 30rem),
+    linear-gradient(135deg, #071412 0%, #0e2421 52%, #161d18 100%);
+  --hero-bg: linear-gradient(135deg, #081f1c 0%, #0c5f57 58%, #1e7a71 100%);
+  --question-bg: linear-gradient(180deg, rgba(13, 30, 27, 0.98), rgba(9, 24, 22, 0.98));
+  --option-bg: #10201e;
+  --alert-bg: #2b2211;
+  --control-shadow: 0 0 0 4px rgba(45, 212, 191, 0.16);
+  --teal: #2dd4bf;
+  --teal-dark: #14b8a6;
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -21,9 +50,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top left, rgba(216, 155, 34, 0.18), transparent 34rem),
-    linear-gradient(135deg, #f7fbf7 0%, #eef7f4 48%, #fff7e8 100%);
+  background: var(--page-bg);
   color: var(--ink);
   font-family: var(--app-font);
   font-size: 16px;
@@ -47,7 +74,7 @@ body {
   margin-bottom: 18px;
   border: 1px solid rgba(15, 118, 110, 0.18);
   border-radius: 8px;
-  background: linear-gradient(135deg, #13443f 0%, #0f766e 58%, #2a8f84 100%);
+  background: var(--hero-bg);
   box-shadow: var(--shadow);
   color: #ffffff;
   overflow: hidden;
@@ -159,7 +186,7 @@ body {
 label {
   display: block;
   margin-bottom: 7px;
-  color: #20302d;
+  color: var(--ink);
   font-size: 0.92rem;
   font-weight: 700;
 }
@@ -173,8 +200,9 @@ input[type="text"] {
   padding: 11px 13px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fbfefd;
+  background: var(--field);
   color: var(--ink);
+  color-scheme: light;
   font: inherit;
   outline: none;
   transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
@@ -183,13 +211,39 @@ input[type="text"] {
 input[type="file"] {
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+input[type="file"]::file-selector-button {
+  display: none;
+}
+
+input[type="file"]::-webkit-file-upload-button {
+  display: none;
 }
 
 input:focus,
 select:focus {
   border-color: rgba(15, 118, 110, 0.65);
-  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.13);
-  background: #ffffff;
+  box-shadow: var(--control-shadow);
+  background: var(--field);
+}
+
+select option {
+  background: var(--field);
+  color: var(--ink);
+}
+
+body.dark-mode input[type="file"],
+body.dark-mode select,
+body.dark-mode input[type="number"],
+body.dark-mode input[type="text"] {
+  color-scheme: dark;
+}
+
+body.dark-mode select option:checked {
+  background: #174b45;
+  color: #effaf7;
 }
 
 .input-action {
@@ -245,10 +299,47 @@ button.secondary {
   box-shadow: 0 10px 22px rgba(36, 58, 54, 0.18);
 }
 
+.theme-switch {
+  width: 54px;
+  min-width: 54px;
+  min-height: 32px;
+  flex: 0 0 auto;
+  padding: 3px;
+  border: 1px solid var(--line);
+  background: var(--field);
+  box-shadow: none;
+}
+
+.theme-switch:hover {
+  box-shadow: none;
+}
+
+.theme-switch-knob {
+  width: 24px;
+  height: 24px;
+  display: block;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 35% 35%, #ffffff 0 22%, transparent 24%),
+    var(--gold);
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+body.dark-mode .theme-switch {
+  background: #0d211e;
+}
+
+body.dark-mode .theme-switch-knob {
+  transform: translateX(20px);
+  background:
+    radial-gradient(circle at 68% 38%, #0d211e 0 28%, transparent 30%),
+    #d8e8e3;
+}
+
 button.ghost {
   flex: 0 1 auto;
   border: 1px solid var(--line);
-  background: #ffffff;
+  background: var(--field);
   color: var(--ink);
   box-shadow: none;
 }
@@ -257,7 +348,7 @@ button.mini {
   min-width: 72px;
   flex: 0 0 auto;
   padding: 10px 14px;
-  background: #ffffff;
+  background: var(--field);
   color: var(--teal-dark);
   border: 1px solid rgba(15, 118, 110, 0.3);
   box-shadow: none;
@@ -293,13 +384,12 @@ button:disabled {
   padding: clamp(18px, 4vw, 28px);
   border: 1px solid rgba(15, 118, 110, 0.18);
   border-radius: 8px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(240, 249, 246, 0.96));
+  background: var(--question-bg);
 }
 
 .question-box h2 {
   margin: 0 0 18px;
-  color: #102421;
+  color: var(--ink);
   font-family: var(--app-font);
   font-size: clamp(1.35rem, 4vw, 2rem);
   line-height: 1.25;
@@ -319,8 +409,8 @@ button:disabled {
   min-height: clamp(74px, 12vw, 96px);
   padding: 16px 12px;
   border: 1px solid #d8e4df;
-  background: #ffffff;
-  color: #132522;
+  background: var(--option-bg);
+  color: var(--ink);
   box-shadow: 0 8px 22px rgba(23, 33, 31, 0.07);
   font-family: var(--app-font);
   font-size: clamp(1.25rem, 4vw, 1.75rem);
@@ -370,7 +460,7 @@ button:disabled {
   border: 1px solid rgba(216, 155, 34, 0.45);
   border-left: 5px solid var(--gold);
   border-radius: 8px;
-  background: #fff8e8;
+  background: var(--alert-bg);
   color: #714800;
   line-height: 1.5;
   white-space: pre-line;
@@ -378,7 +468,7 @@ button:disabled {
 
 @media (max-width: 760px) {
   body {
-    background: linear-gradient(180deg, #eff8f4 0%, #fff8e8 100%);
+    background: var(--page-bg);
   }
 
   .container {
@@ -391,7 +481,7 @@ button:disabled {
     gap: 12px;
     padding: 22px;
     margin-bottom: 16px;
-    background: linear-gradient(135deg, #13443f 0%, #0f766e 58%, #2a8f84 100%);
+    background: var(--hero-bg);
   }
 
   .hero h1 {
@@ -426,6 +516,7 @@ button:disabled {
   }
 
   .section-heading {
+    align-items: flex-start;
     margin-bottom: 16px;
   }
 
@@ -480,6 +571,12 @@ button:disabled {
     min-height: 44px;
     min-width: 0;
     padding: 10px 14px;
+  }
+
+  .theme-switch {
+    width: 52px;
+    min-width: 52px;
+    min-height: 32px;
   }
 
   button.mini {
