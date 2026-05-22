@@ -33,6 +33,7 @@ const THEME_CACHE_KEY = "kanji-renshuu-theme";
 const RADICALS_DATA_URL = "assets/data/radicals.json";
 const MAX_OPTION_COUNT = 4;
 const MAX_QUESTION_COUNT = 300;
+const REMOTE_FETCH_TIMEOUT_MS = 3500;
 
 let kanjiData = [];
 let radicalsData = [];
@@ -423,12 +424,33 @@ function normalizeGoogleSheetsUrl(url) {
   }
 }
 
+async function fetchWithTimeout(url, options = {}) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), REMOTE_FETCH_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 async function parseRemoteUrl(url) {
   hideError();
 
+  if (!navigator.onLine) {
+    if (!loadKanjiDataFromStorage()) {
+      showError("Không có mạng và chưa có dữ liệu offline. Hãy mở app khi có mạng một lần để lưu dữ liệu.");
+    }
+    return;
+  }
+
   try {
     const normalizedUrl = normalizeGoogleSheetsUrl(url);
-    const response = await fetch(normalizedUrl);
+    const response = await fetchWithTimeout(normalizedUrl);
 
     if (!response.ok) {
       if (!loadKanjiDataFromStorage()) {

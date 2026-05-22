@@ -1,4 +1,4 @@
-const CACHE_NAME = "kanji-renshuu-v25";
+const CACHE_NAME = "kanji-renshuu-v26";
 
 const APP_SHELL = [
   "",
@@ -41,7 +41,20 @@ self.addEventListener("fetch", (event) => {
 
   if (event.request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match(INDEX_URL))
+      caches.match(INDEX_URL).then(cached => {
+        const fresh = fetch(event.request)
+          .then((response) => {
+            if (response && response.ok) {
+              const copy = response.clone();
+              caches.open(CACHE_NAME).then(cache => cache.put(INDEX_URL, copy));
+            }
+
+            return response;
+          })
+          .catch(() => cached);
+
+        return cached || fresh;
+      })
     );
     return;
   }
