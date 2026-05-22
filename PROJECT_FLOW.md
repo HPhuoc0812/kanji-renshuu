@@ -7,13 +7,36 @@ Kanji Renshuu la mot web app tinh/PWA dung de luyen Kanji bang du lieu tu Excel,
 Project gom cac file chinh:
 
 - `index.html`: dung giao dien chinh.
-- `assets/js/app.js`: xu ly toan bo logic cua app.
+- `assets/js/app.js`: entrypoint, bind event, khoi dong app va dang ky service worker.
+- `assets/js/constants.js`: hang so dung chung.
+- `assets/js/dom.js`: gom DOM references dung chung cho cac module.
+- `assets/js/data.js`: load/cache/import/chuan hoa du lieu Kanji.
+- `assets/js/quiz.js`: tao quiz, render cau hoi, cham diem va phim dieu huong dap an.
+- `assets/js/radicals.js`: load, loc va render du lieu bo thu.
+- `assets/js/ui.js`: theme, tab, error UI va helper UI nho.
+- `assets/js/utils.js`: helper chuan hoa text, random va shuffle.
 - `assets/css/styles.css`: style giao dien.
+- `assets/data/kanji-cache.json`: du lieu Kanji tinh di kem app de phong truong hop chua co internet/cache runtime.
 - `assets/data/radicals.json`: du lieu 214 bo thu Kanji/Kangxi.
 - `libs/xlsx.full.min.js`: thu vien doc file Excel.
 - `sw.js`: service worker cho cache/offline.
 - `manifest.webmanifest`: cau hinh PWA.
 - `dev-server.mjs`: server local don gian de chay app.
+
+### 1.1. Nguyen tac chia module
+
+App van la vanilla JavaScript, khong dung bundler/framework. Cac file trong `assets/js` la ES modules va duoc browser load truc tiep.
+
+Ranh gioi chinh:
+
+- `app.js` chi dieu phoi: import module, bind event, goi init.
+- `data.js` quan ly state Kanji va cac nguon du lieu.
+- `quiz.js` quan ly state quiz rieng, khong parse/import data.
+- `radicals.js` quan ly rieng tab tra cuu bo thu.
+- `ui.js` xu ly thao tac UI dung chung.
+- `dom.js` gom cac selector tap trung de tranh lap lai `document.getElementById(...)`.
+- `constants.js` gom cac key/cache path/gioi han.
+- `utils.js` gom helper thuan, khong dung DOM.
 
 ## 2. Luong khoi dong app
 
@@ -21,13 +44,19 @@ Khi mo `index.html`, trinh duyet load theo thu tu:
 
 1. CSS tu `assets/css/styles.css`.
 2. Thu vien Excel `libs/xlsx.full.min.js`.
-3. File logic `assets/js/app.js`.
+3. File module entrypoint `assets/js/app.js`.
+
+`index.html` load entrypoint bang:
+
+```html
+<script type="module" src="assets/js/app.js"></script>
+```
 
 Trong `assets/js/app.js`, khi su kien `DOMContentLoaded` chay, app goi:
 
 ```js
 loadThemePreference();
-setModeSelectValue(modeSelect.value);
+setModeSelectValue(elements.modeSelect.value);
 setActiveTab("practicePanel");
 autoLoadDefaultUrl();
 loadRadicalsData();
@@ -38,7 +67,7 @@ Y nghia:
 1. `loadThemePreference()` doc theme sang/toi tu `localStorage`. Neu chua co thi lay theo theme cua he thong.
 2. `setModeSelectValue()` dong bo segmented control voi select that.
 3. `setActiveTab("practicePanel")` dat tab mac dinh la tab luyen tap.
-4. `autoLoadDefaultUrl()` tu dong tai du lieu tu URL mac dinh trong o input.
+4. `autoLoadDefaultUrl()` uu tien tai du lieu Kanji da cache, sau do doc `kanji-cache.json` neu can, roi moi tu dong cap nhat tu URL mac dinh khi co mang.
 5. `loadRadicalsData()` tai file JSON 214 bo thu de phuc vu tab tra cuu.
 
 Sau khi trang load xong, app dang ky service worker:
@@ -142,11 +171,20 @@ App co 2 nhom du lieu:
 1. Du lieu Kanji de luyen tap.
 2. Du lieu bo thu de tra cuu.
 
-Du lieu Kanji co 3 nguon:
+Du lieu Kanji co 4 nguon:
 
 1. Google Sheets / URL.
 2. File local Excel hoac CSV.
-3. Du lieu mau fallback.
+3. Du lieu da luu trong `localStorage`.
+4. File tinh `assets/data/kanji-cache.json`.
+
+Thu tu uu tien khi app khoi dong:
+
+1. Doc du lieu da import/cap nhat trong `localStorage` bang `loadKanjiDataFromStorage()`.
+2. Neu chua co `localStorage`, doc seed JSON `assets/data/kanji-cache.json` bang `loadBundledKanjiData()`.
+3. Neu trinh duyet bao co mang, goi `parseRemoteUrl(defaultUrl)` de cap nhat du lieu moi tu URL mac dinh.
+4. Neu URL cap nhat thanh cong, du lieu moi se ghi vao `localStorage` bang `saveKanjiDataToStorage()`.
+5. Neu ca JSON di kem cung khong doc duoc, app moi dung `fallbackData` toi thieu trong code.
 
 ### 4.1. Du lieu tu Google Sheets / URL
 
@@ -161,13 +199,13 @@ Luong xu ly:
 1. Nguoi dung bam `Import tu URL`, hoac app tu dong goi `autoLoadDefaultUrl()` khi mo trang.
 2. URL duoc dua vao `parseRemoteUrl(url)`.
 3. Neu URL la Google Sheets, app goi `normalizeGoogleSheetsUrl(url)` de doi link edit thanh link export CSV.
-4. App dung `fetch()` de tai du lieu.
+4. App dung `fetchWithTimeout()` de tai du lieu, gioi han thoi gian cho request remote.
 5. Neu response la CSV, app doc text va goi `loadCsvText(text)`.
 6. Neu response la Excel, app doc buffer va goi `parseExcelBuffer(buffer)`.
 7. Neu khong xac dinh duoc ro kieu file, app thu doc nhu CSV.
 8. Du lieu sau cung duoc dua vao `loadDataFromJson(json)`.
 
-Neu fetch that bai, app thu doc du lieu da cache trong `localStorage` bang `loadKanjiDataFromStorage()`.
+Neu trinh duyet dang offline, app bo qua fetch remote va dung du lieu offline. Neu fetch that bai hoac timeout, app thu doc du lieu da cache trong `localStorage` bang `loadKanjiDataFromStorage()`.
 
 ### 4.2. Du lieu tu file local
 
@@ -202,24 +240,101 @@ Voi Excel:
 5. Chuyen sheet thanh JSON.
 6. Goi `loadDataFromJson(json)`.
 
-### 4.3. Du lieu fallback
+### 4.3. Du lieu da cache trong localStorage
 
-Neu chua co du lieu import, app dung `fallbackData`.
+Du lieu import thanh cong tu URL, Google Sheets, Excel hoac CSV duoc luu vao `localStorage`.
+
+Key cache:
+
+```js
+kanji-renshuu-data-v1
+```
+
+Moi ban ghi cache gom:
+
+```js
+{
+  savedAt: "...",
+  hasLessonInfo: true,
+  data: [...]
+}
+```
+
+Day la lop du lieu dong cua app. Browser co the tu ghi/cap nhat lop nay khi app dang chay.
+
+### 4.4. Du lieu Kanji tinh di kem app
+
+Du lieu Kanji tinh nam trong:
+
+```text
+assets/data/kanji-cache.json
+```
+
+File nay co vai tro nhu seed/fallback cho lan dau mo app khi chua co internet hoac chua tung import du lieu.
+
+Dang du lieu:
+
+```js
+{
+  "version": 1,
+  "hasLessonInfo": false,
+  "items": [
+    {
+      "kanji": "...",
+      "reading": "...",
+      "lesson": 1
+    }
+  ]
+}
+```
+
+Trong do:
+
+- `version`: version du lieu tinh.
+- `hasLessonInfo`: cho biet seed co ho tro cot bai hay khong.
+- `items`: danh sach Kanji dung de luyen tap.
+
+Neu `lesson` khong co trong item, app van dung duoc nhung khong loc theo bai.
+
+Ham tai du lieu:
+
+```js
+loadBundledKanjiData()
+```
+
+Luong xu ly:
+
+1. Goi `fetch("assets/data/kanji-cache.json")`.
+2. Parse response thanh JSON.
+3. Kiem tra `items` la array va khong rong.
+4. Gan du lieu vao `bundledKanjiData`.
+5. Goi `setKanjiData(...)` de app co du lieu luyen tap ngay ca khi chua co internet.
+6. Neu doc JSON that bai, app dung `fallbackData` toi thieu trong code.
+
+Luu y quan trong:
+
+- Browser/PWA khong the tu ghi nguoc vao file `assets/data/kanji-cache.json`.
+- Khi co internet, du lieu moi duoc cap nhat vao `localStorage`, khong sua file JSON tinh.
+- Muon cap nhat file JSON that trong repo thi can sua file thu cong hoac dung script/build step ben ngoai browser.
+
+### 4.5. Du lieu fallback
+
+Neu chua co du lieu import va khong doc duoc `kanji-cache.json`, app dung `fallbackData` toi thieu trong `assets/js/app.js`.
 
 Ham chon nguon du lieu:
 
 ```js
 function getSourceData() {
-  return kanjiData.length ? kanjiData : fallbackData;
+  return kanjiData.length ? kanjiData : bundledKanjiData;
 }
 ```
 
 Nghia la:
 
-- Neu `kanjiData` co du lieu, dung du lieu that.
-- Neu `kanjiData` rong, dung du lieu mau.
+- Neu `kanjiData` co du lieu, dung du lieu dang active.
+- Neu `kanjiData` rong, dung du lieu tinh/fallback trong `bundledKanjiData`.
 
-### 4.4. Du lieu 214 bo thu
+### 4.6. Du lieu 214 bo thu
 
 Du lieu bo thu nam trong:
 
@@ -727,7 +842,7 @@ File `manifest.webmanifest` cau hinh app nhu mot PWA:
 File `sw.js` dung cache name:
 
 ```js
-kanji-renshuu-v25
+kanji-renshuu-v29
 ```
 
 Danh sach app shell duoc cache:
@@ -736,6 +851,14 @@ Danh sach app shell duoc cache:
 - `manifest.webmanifest`
 - `assets/css/styles.css`
 - `assets/js/app.js`
+- `assets/js/constants.js`
+- `assets/js/data.js`
+- `assets/js/dom.js`
+- `assets/js/quiz.js`
+- `assets/js/radicals.js`
+- `assets/js/ui.js`
+- `assets/js/utils.js`
+- `assets/data/kanji-cache.json`
 - `assets/data/radicals.json`
 - `libs/xlsx.full.min.js`
 - Cac icon trong `assets/icons`
@@ -758,8 +881,11 @@ Luong service worker:
 
 Voi request navigate:
 
-1. Thu fetch tu network.
-2. Neu fail, tra ve `index.html` trong cache.
+1. Tim `index.html` trong cache truoc.
+2. Neu co cache, tra ve ngay de offline/slow network mo app nhanh hon.
+3. Dong thoi thu fetch ban moi tu network.
+4. Neu fetch thanh cong, cap nhat lai `index.html` trong cache.
+5. Neu chua co cache, moi cho fetch network va fallback ve cache neu fetch fail.
 
 Voi request GET khac:
 
@@ -768,11 +894,36 @@ Voi request GET khac:
 3. Neu chua co, fetch network.
 4. Neu response hop le, clone response va luu vao cache.
 
-Ngoai service worker, du lieu Kanji con duoc cache rieng trong `localStorage`, giup app co the dung du lieu da import khi mat mang.
+Ngoai service worker, du lieu Kanji con co 2 lop offline rieng:
+
+1. `assets/data/kanji-cache.json`: seed tinh nam trong app shell cache, giup lan dau khong co internet van co du lieu toi thieu.
+2. `localStorage`: cache dong cho du lieu da import/cap nhat tu Google Sheets, URL, Excel hoac CSV.
 
 Du lieu bo thu nam trong app shell cache nen co the doc offline sau khi service worker cache thanh cong.
 
-## 19. Chay project local
+## 19. Luong offline du lieu Kanji
+
+Khi mo app, `autoLoadDefaultUrl()` chay theo thu tu:
+
+```text
+Mo app
+  -> Thu doc localStorage
+  -> Neu co, dung du lieu da import/cap nhat gan nhat
+  -> Neu khong co, fetch assets/data/kanji-cache.json
+  -> Neu doc duoc JSON, dung seed Kanji di kem app
+  -> Neu JSON cung fail, dung fallbackData trong code
+  -> Neu trinh duyet online, fetch URL mac dinh de cap nhat
+  -> Neu cap nhat thanh cong, ghi du lieu moi vao localStorage
+```
+
+Y nghia:
+
+- Lan dau mo app khong co internet van co du lieu tu `kanji-cache.json`.
+- Cac lan sau, neu tung import thanh cong, app uu tien du lieu moi trong `localStorage`.
+- File `kanji-cache.json` khong tu thay doi khi app chay. No chi duoc cap nhat khi sua file trong repo.
+- Du lieu tu internet chi tu dong cap nhat vao cache cua browser/localStorage.
+
+## 20. Chay project local
 
 Co the chay server local bang:
 
@@ -795,7 +946,7 @@ $env:PORT=3000
 node dev-server.mjs
 ```
 
-## 20. Luong tong quat rut gon
+## 21. Luong tong quat rut gon
 
 Toan bo app co the hieu theo pipeline:
 
@@ -804,7 +955,9 @@ Mo app
   -> Load theme
   -> Dong bo mode select
   -> Mo tab Luyen tap
-  -> Tu tai du lieu Google Sheets/cache
+  -> Doc localStorage
+  -> Neu chua co thi doc assets/data/kanji-cache.json
+  -> Neu co mang thi cap nhat tu Google Sheets/URL
   -> Tai du lieu 214 bo thu
   -> Nguoi dung chon mode, so cau, bai
   -> Bam bat dau
@@ -830,16 +983,20 @@ Mo app
   -> Render lai danh sach ket qua
 ```
 
-## 21. Ghi chu ky thuat
+## 22. Ghi chu ky thuat
 
-- Logic hien tai nam gan nhu toan bo trong `assets/js/app.js`.
+- Logic JavaScript da duoc chia theo module trong `assets/js`.
+- `assets/js/app.js` chi nen giu vai tro entrypoint/orchestration, tranh dua them logic domain lon vao day.
 - App khong dung framework frontend.
-- App doc Excel bang thu vien `XLSX`.
-- App doc CSV bang parser tu viet trong `splitCsvLine()`.
-- App co 2 lop offline:
+- App doc Excel bang thu vien `XLSX` trong `assets/js/data.js`.
+- App doc CSV bang parser tu viet trong `assets/js/data.js`.
+- App co 3 lop offline:
   - Service worker cache app shell.
-  - `localStorage` cache du lieu Kanji.
+  - `assets/data/kanji-cache.json` lam seed tinh cho du lieu Kanji.
+  - `localStorage` cache du lieu Kanji da import/cap nhat.
 - Du lieu 214 bo thu duoc luu trong repo tai `assets/data/radicals.json` va duoc cache bang service worker.
+- Browser khong the tu ghi nguoc vao `assets/data/kanji-cache.json`; neu can cap nhat file nay can sua repo hoac dung script ngoai browser.
+- Khi them file JS module moi, can them file do vao `APP_SHELL` trong `sw.js` de PWA offline khong bi thieu dependency.
 - Giao dien co 2 tab rieng:
   - `practicePanel`: luyen tap.
   - `radicalsPanel`: tra cuu bo thu.

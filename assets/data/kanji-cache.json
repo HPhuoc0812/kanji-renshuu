@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "hasLessonInfo": false,
+  "items": [
+    {
+      "kanji": "日",
+      "reading": "Nhật"
+    },
+    {
+      "kanji": "月",
+      "reading": "Nguyệt"
+    },
+    {
+      "kanji": "火",
+      "reading": "Hỏa"
+    },
+    {
+      "kanji": "水",
+      "reading": "Thủy"
+    },
+    {
+      "kanji": "木",
+      "reading": "Mộc"
+    },
+    {
+      "kanji": "金",
+      "reading": "Kim"
+    },
+    {
+      "kanji": "土",
+      "reading": "Thổ"
+    },
+    {
+      "kanji": "山",
+      "reading": "Sơn"
+    },
+    {
+      "kanji": "川",
+      "reading": "Xuyên"
+    },
+    {
+      "kanji": "田",
+      "reading": "Điền"
+    }
+  ]
+}

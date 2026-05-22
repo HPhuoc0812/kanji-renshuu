@@ -1,816 +1,38 @@
-const fileInput = document.getElementById("fileInput");
-const urlInput = document.getElementById("urlInput");
-const importBtn = document.getElementById("importBtn");
-const modeSelect = document.getElementById("modeSelect");
-const modeSegmentButtons = Array.from(document.querySelectorAll("[data-mode-value]"));
-const questionCountInput = document.getElementById("questionCount");
-const maxQuestionBtn = document.getElementById("maxQuestionBtn");
-const themeToggleBtn = document.getElementById("themeToggleBtn");
-const lessonFromInput = document.getElementById("lessonFrom");
-const lessonToInput = document.getElementById("lessonTo");
-const startBtn = document.getElementById("startBtn");
-const quizArea = document.getElementById("quizArea");
-const questionPrompt = document.getElementById("questionPrompt");
-const optionsContainer = document.getElementById("options");
-const quizStatus = document.getElementById("quizStatus");
-const scoreInfo = document.getElementById("scoreInfo");
-const nextBtn = document.getElementById("nextBtn");
-const confirmBtn = document.getElementById("confirmBtn");
-const resetBtn = document.getElementById("resetBtn");
-const fileInfo = document.getElementById("fileInfo");
-const errorMessage = document.getElementById("errorMessage");
-const radicalsSearchInput = document.getElementById("radicalsSearch");
-const radicalsStrokeFilter = document.getElementById("radicalsStrokeFilter");
-const radicalsGrid = document.getElementById("radicalsGrid");
-const radicalsCount = document.getElementById("radicalsCount");
-const radicalsMessage = document.getElementById("radicalsMessage");
-const tabButtons = Array.from(document.querySelectorAll("[data-tab-target]"));
-const tabPanels = Array.from(document.querySelectorAll(".tab-panel"));
-const practicePanel = document.getElementById("practicePanel");
-
-const DATA_CACHE_KEY = "kanji-renshuu-data-v1";
-const THEME_CACHE_KEY = "kanji-renshuu-theme";
-const RADICALS_DATA_URL = "assets/data/radicals.json";
-const MAX_OPTION_COUNT = 4;
-const MAX_QUESTION_COUNT = 300;
-const REMOTE_FETCH_TIMEOUT_MS = 3500;
-
-let kanjiData = [];
-let radicalsData = [];
-let quizItems = [];
-let currentIndex = 0;
-let score = 0;
-let selectedChoice = null;
-let selectedButton = null;
-let hasLessonInfo = false;
-
-const fallbackData = [
-  { kanji: "日", reading: "Nhật" },
-  { kanji: "月", reading: "Nguyệt" },
-  { kanji: "火", reading: "Hỏa" },
-  { kanji: "水", reading: "Thủy" },
-  { kanji: "木", reading: "Mộc" },
-  { kanji: "金", reading: "Kim" },
-  { kanji: "土", reading: "Thổ" },
-  { kanji: "山", reading: "Sơn" },
-  { kanji: "川", reading: "Xuyên" },
-  { kanji: "田", reading: "Điền" }
-];
-
-function showError(message) {
-  errorMessage.textContent = message;
-  errorMessage.classList.remove("hidden");
-}
-
-function hideError() {
-  errorMessage.classList.add("hidden");
-  errorMessage.textContent = "";
-}
-
-function applyTheme(theme) {
-  const isDark = theme === "dark";
-  document.body.classList.toggle("dark-mode", isDark);
-  themeToggleBtn.setAttribute("aria-pressed", String(isDark));
-  themeToggleBtn.title = isDark ? "Tắt dark mode" : "Bật dark mode";
-}
-
-function loadThemePreference() {
-  const savedTheme = localStorage.getItem(THEME_CACHE_KEY);
-  const fallbackTheme = window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  applyTheme(savedTheme || fallbackTheme);
-}
-
-function toggleTheme() {
-  const nextTheme = document.body.classList.contains("dark-mode") ? "light" : "dark";
-  localStorage.setItem(THEME_CACHE_KEY, nextTheme);
-  applyTheme(nextTheme);
-}
-
-function setActiveTab(panelId) {
-  tabPanels.forEach((panel) => {
-    const isActive = panel.id === panelId;
-    panel.classList.toggle("hidden", !isActive);
-    panel.setAttribute("aria-hidden", String(!isActive));
-  });
-
-  tabButtons.forEach((button) => {
-    const isActive = button.dataset.tabTarget === panelId;
-    button.classList.toggle("active", isActive);
-    button.setAttribute("aria-selected", String(isActive));
-  });
-}
-
-function setModeSelectValue(value) {
-  const hasMode = modeSegmentButtons.some(button => button.dataset.modeValue === value);
-
-  if (!hasMode) {
-    return;
-  }
-
-  modeSelect.value = value;
-
-  modeSegmentButtons.forEach((button) => {
-    const isSelected = button.dataset.modeValue === value;
-    button.classList.toggle("active", isSelected);
-    button.setAttribute("aria-pressed", String(isSelected));
-  });
-}
-
-function normalizeText(text) {
-  return String(text || "").trim();
-}
-
-function normalizeReading(reading) {
-  return normalizeText(reading).normalize("NFC").toLocaleLowerCase("vi");
-}
-
-function normalizeSearchText(value) {
-  return normalizeText(value)
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("vi");
-}
-
-function getRadicalSearchText(item) {
-  return normalizeSearchText([
-    item.id,
-    item.radical,
-    item.hanViet,
-    item.meaning,
-    item.strokes,
-    ...(item.variants || [])
-  ].join(" "));
-}
-
-function populateRadicalStrokeFilter() {
-  const strokes = [...new Set(radicalsData.map(item => item.strokes))].sort((a, b) => a - b);
-
-  radicalsStrokeFilter.innerHTML = '<option value="">Tất cả</option>';
-  strokes.forEach((stroke) => {
-    const option = document.createElement("option");
-    option.value = String(stroke);
-    option.textContent = `${stroke} nét`;
-    radicalsStrokeFilter.appendChild(option);
-  });
-}
-
-function getFilteredRadicals() {
-  const query = normalizeSearchText(radicalsSearchInput.value);
-  const stroke = Number(radicalsStrokeFilter.value);
-  const hasStroke = Number.isFinite(stroke) && stroke > 0;
-
-  return radicalsData.filter((item) => {
-    if (hasStroke && item.strokes !== stroke) {
-      return false;
-    }
-
-    if (!query) {
-      return true;
-    }
-
-    return getRadicalSearchText(item).includes(query);
-  });
-}
-
-function renderRadicals() {
-  const filtered = getFilteredRadicals();
-  radicalsGrid.innerHTML = "";
-  radicalsCount.textContent = `${filtered.length} / ${radicalsData.length} bộ`;
-
-  if (filtered.length === 0) {
-    radicalsMessage.textContent = "Không tìm thấy bộ thủ phù hợp.";
-    return;
-  }
-
-  radicalsMessage.textContent = "";
-
-  filtered.forEach((item) => {
-    const card = document.createElement("article");
-    card.className = "radical-item";
-
-    const symbol = document.createElement("div");
-    symbol.className = "radical-symbol";
-    symbol.textContent = item.radical;
-
-    const details = document.createElement("div");
-    details.className = "radical-details";
-
-    const title = document.createElement("h3");
-    title.className = "radical-title";
-    title.textContent = `${item.id}. ${item.hanViet}`;
-
-    const meta = document.createElement("p");
-    meta.className = "radical-meta";
-    meta.textContent = `${item.strokes} nét - ${item.meaning}`;
-
-    details.append(title, meta);
-
-    if (item.variants?.length) {
-      const variants = document.createElement("p");
-      variants.className = "radical-variants";
-      variants.textContent = `Dạng khác: ${item.variants.join(" ")}`;
-      details.appendChild(variants);
-    }
-
-    card.append(symbol, details);
-    radicalsGrid.appendChild(card);
-  });
-}
-
-async function loadRadicalsData() {
-  try {
-    const response = await fetch(RADICALS_DATA_URL);
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    if (!Array.isArray(data) || data.length === 0) {
-      throw new Error("Empty radicals data");
-    }
-
-    radicalsData = data;
-    populateRadicalStrokeFilter();
-    renderRadicals();
-  } catch {
-    radicalsCount.textContent = "Chưa tải được";
-    radicalsMessage.textContent = "Không thể tải dữ liệu bộ thủ. Hãy chạy app qua dev server để trình duyệt cho phép đọc file JSON.";
-  }
-}
-
-function getRandomInt(max) {
-  return Math.floor(Math.random() * max);
-}
-
-function shuffle(array) {
-  for (let i = array.length - 1; i > 0; i -= 1) {
-    const j = getRandomInt(i + 1);
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-}
-
-function setKanjiData(data, lessonInfo) {
-  kanjiData = data;
-  hasLessonInfo = lessonInfo;
-}
-
-function saveKanjiDataToStorage() {
-  try {
-    localStorage.setItem(DATA_CACHE_KEY, JSON.stringify({
-      savedAt: new Date().toISOString(),
-      hasLessonInfo,
-      data: kanjiData
-    }));
-  } catch {
-    // App vẫn chạy nếu trình duyệt chặn localStorage hoặc bộ nhớ đầy.
-  }
-}
-
-function loadKanjiDataFromStorage() {
-  try {
-    const raw = localStorage.getItem(DATA_CACHE_KEY);
-
-    if (!raw) {
-      return false;
-    }
-
-    const cached = JSON.parse(raw);
-
-    if (!Array.isArray(cached.data) || cached.data.length === 0) {
-      return false;
-    }
-
-    setKanjiData(cached.data, Boolean(cached.hasLessonInfo));
-    hideError();
-    fileInfo.textContent = `Đang dùng dữ liệu đã lưu offline (${kanjiData.length} dòng). ${hasLessonInfo ? "Có hỗ trợ lọc theo cột Bài." : "Không có cột Bài."}`;
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function parseExcel(file) {
-  hideError();
-  fileInfo.textContent = "Đang đọc file Excel...";
-  const reader = new FileReader();
-
-  reader.onload = (event) => {
-    parseExcelBuffer(event.target.result, "File Excel không có dữ liệu hoặc dữ liệu trống.");
-  };
-
-  reader.onerror = () => {
-    showError("Lỗi đọc file. Vui lòng thử lại.");
-  };
-
-  reader.readAsArrayBuffer(file);
-}
-
-function parseExcelBuffer(buffer, emptyMessage = "File không có dữ liệu.") {
-  try {
-    if (!window.XLSX) {
-      showError("Thư viện XLSX chưa tải xong. Vui lòng làm mới trang và thử lại.");
-      return;
-    }
-
-    const data = new Uint8Array(buffer);
-    const workbook = XLSX.read(data, { type: "array" });
-
-    if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
-      showError("File không có bảng tính nào.");
-      return;
-    }
-
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-
-    if (!json || json.length === 0) {
-      showError(emptyMessage);
-      return;
-    }
-
-    loadDataFromJson(json);
-  } catch (err) {
-    showError(`Lỗi xử lý file: ${err.message || err}`);
-  }
-}
-
-function parseCsv(file) {
-  hideError();
-  const reader = new FileReader();
-
-  reader.onload = (event) => {
-    loadCsvText(event.target.result);
-  };
-
-  reader.onerror = () => {
-    showError("Lỗi đọc file CSV. Vui lòng thử lại.");
-  };
-
-  reader.readAsText(file, "utf-8");
-}
-
-function splitCsvLine(line) {
-  const values = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i += 1) {
-    const char = line[i];
-    const next = line[i + 1];
-
-    if (char === '"' && next === '"') {
-      current += '"';
-      i += 1;
-    } else if (char === '"') {
-      inQuotes = !inQuotes;
-    } else if (char === "," && !inQuotes) {
-      values.push(current.trim());
-      current = "";
-    } else {
-      current += char;
-    }
-  }
-
-  values.push(current.trim());
-  return values;
-}
-
-function loadCsvText(csv) {
-  const rows = csv.split(/\r?\n/).filter(row => row.trim());
-
-  if (rows.length < 2) {
-    showError("File CSV không có dữ liệu hoặc định dạng không đúng.");
-    return;
-  }
-
-  const headers = splitCsvLine(rows[0]);
-  const json = rows.slice(1).map((line) => {
-    const values = splitCsvLine(line);
-    return headers.reduce((obj, header, index) => {
-      obj[header] = values[index] || "";
-      return obj;
-    }, {});
-  });
-
-  if (json.length === 0) {
-    showError("File CSV không có dữ liệu.");
-    return;
-  }
-
-  loadDataFromJson(json);
-}
-
-function normalizeGoogleSheetsUrl(url) {
-  try {
-    const parsed = new URL(url);
-
-    if (!parsed.hostname.toLowerCase().includes("docs.google.com")) {
-      return url;
-    }
-
-    const idMatch = parsed.pathname.match(/\/d\/([a-zA-Z0-9-_]+)/);
-
-    if (!idMatch) {
-      return url;
-    }
-
-    const sheetId = idMatch[1];
-    const gid = parsed.searchParams.get("gid") || "0";
-    return `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
-  } catch {
-    return url;
-  }
-}
-
-async function fetchWithTimeout(url, options = {}) {
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), REMOTE_FETCH_TIMEOUT_MS);
-
-  try {
-    return await fetch(url, {
-      ...options,
-      signal: controller.signal
-    });
-  } finally {
-    window.clearTimeout(timeoutId);
-  }
-}
-
-async function parseRemoteUrl(url) {
-  hideError();
-
-  if (!navigator.onLine) {
-    if (!loadKanjiDataFromStorage()) {
-      showError("Không có mạng và chưa có dữ liệu offline. Hãy mở app khi có mạng một lần để lưu dữ liệu.");
-    }
-    return;
-  }
-
-  try {
-    const normalizedUrl = normalizeGoogleSheetsUrl(url);
-    const response = await fetchWithTimeout(normalizedUrl);
-
-    if (!response.ok) {
-      if (!loadKanjiDataFromStorage()) {
-        showError(`Không tải được file từ URL. Mã: ${response.status}`);
-      }
-      return;
-    }
-
-    const lowerUrl = normalizedUrl.split("?")[0].toLowerCase();
-    const contentType = response.headers.get("content-type") || "";
-
-    if (lowerUrl.endsWith(".csv") || contentType.includes("text/csv")) {
-      const text = await response.text();
-      loadCsvText(text);
-      return;
-    }
-
-    if (
-      lowerUrl.endsWith(".xlsx") ||
-      lowerUrl.endsWith(".xls") ||
-      contentType.includes("spreadsheetml") ||
-      contentType.includes("vnd.ms-excel")
-    ) {
-      const buffer = await response.arrayBuffer();
-      parseExcelBuffer(buffer);
-      return;
-    }
-
-    const buffer = await response.arrayBuffer();
-    const text = new TextDecoder("utf-8").decode(buffer);
-    loadCsvText(text);
-  } catch {
-    if (!loadKanjiDataFromStorage()) {
-      showError("Không có mạng và chưa có dữ liệu offline. Hãy mở app khi có mạng một lần để lưu dữ liệu.");
-    }
-  }
-}
-
-function loadDataFromJson(json) {
-  const keyMap = {
-    kanji: ["Kanji", "kanji", "漢字", "kanji ", "B"],
-    reading: ["Âm Hán", "ÂmHán", "reading", "Hán", "âm hán", "am han", "C"],
-    lesson: ["Bài", "bài", "Bai", "lesson", "Lesson", "A"]
-  };
-
-  const headers = Object.keys(json[0] || {});
-  const findKey = names => headers.find(header =>
-    names.some(name => header.toLowerCase() === name.toLowerCase())
-  );
-
-  const kanjiKey = findKey(keyMap.kanji);
-  const readingKey = findKey(keyMap.reading);
-  const lessonKey = findKey(keyMap.lesson);
-
-  if (!kanjiKey || !readingKey) {
-    const headerList = headers.length > 0
-      ? `(Cột tìm được: ${headers.join(", ")})`
-      : "(File không có header)";
-    showError(`Không tìm thấy cột Kanji hoặc Âm Hán. ${headerList}\n\nFile phải có: Cột A (Bài), Cột B (Kanji), Cột C (Âm Hán)`);
-    fileInfo.textContent = "Lỗi: Cấu trúc file không đúng";
-    return;
-  }
-
-  const data = json
-    .map((row) => {
-      const lessonRaw = lessonKey ? normalizeText(row[lessonKey]) : "";
-      const lessonNumber = lessonRaw ? Number(lessonRaw) : null;
-
-      return {
-        kanji: normalizeText(row[kanjiKey]),
-        reading: normalizeText(row[readingKey]),
-        lesson: Number.isFinite(lessonNumber) ? lessonNumber : null
-      };
-    })
-    .filter(item => item.kanji && item.reading);
-
-  if (data.length === 0) {
-    showError("Không có dữ liệu hợp lệ. Dữ liệu trong Kanji (cột B) hoặc Âm Hán (cột C) bị trống hoặc không hợp lệ. Kiểm tra file của bạn.");
-    fileInfo.textContent = "Lỗi: Dữ liệu không hợp lệ";
-    return;
-  }
-
-  setKanjiData(data, Boolean(lessonKey));
-  saveKanjiDataToStorage();
-  hideError();
-  fileInfo.textContent = `Đã tải ${kanjiData.length} dòng dữ liệu và lưu để dùng offline. ${hasLessonInfo ? "Có hỗ trợ lọc theo cột Bài." : "Không tìm thấy cột Bài trong file."}`;
-}
-
-function autoLoadDefaultUrl() {
-  const defaultUrl = urlInput.value.trim();
-
-  loadKanjiDataFromStorage();
-
-  if (defaultUrl && navigator.onLine) {
-    parseRemoteUrl(defaultUrl);
-  }
-}
-
-function getSourceData() {
-  return kanjiData.length ? kanjiData : fallbackData;
-}
-
-function getFilteredSourceData() {
-  const source = getSourceData();
-  const from = Number(lessonFromInput.value);
-  const to = Number(lessonToInput.value);
-  const hasFrom = Number.isFinite(from) && from > 0;
-  const hasTo = Number.isFinite(to) && to > 0;
-
-  if ((hasFrom || hasTo) && !hasLessonInfo) {
-    return {
-      data: [],
-      error: "Dữ liệu hiện tại không có cột Bài nên không thể lọc theo phạm vi bài."
-    };
-  }
-
-  if (hasFrom && hasTo && from > to) {
-    return {
-      data: [],
-      error: 'Giá trị "Từ bài" phải nhỏ hơn hoặc bằng "Đến bài".'
-    };
-  }
-
-  if (!hasFrom && !hasTo) {
-    return { data: [...source], error: "" };
-  }
-
-  return {
-    data: source.filter((item) => {
-      if (item.lesson === null) return false;
-      if (hasFrom && item.lesson < from) return false;
-      if (hasTo && item.lesson > to) return false;
-      return true;
-    }),
-    error: ""
-  };
-}
-
-function setMaxQuestionCount() {
-  const { data, error } = getFilteredSourceData();
-
-  if (error) {
-    showError(error);
-    return false;
-  }
-
-  if (data.length === 0) {
-    showError("Không tìm thấy mục nào phù hợp với phạm vi bài đã chọn.");
-    return false;
-  }
-
-  questionCountInput.value = Math.min(data.length, MAX_QUESTION_COUNT);
-  hideError();
-  return true;
-}
-
-function buildChoices(item, source, mode) {
-  const currentReading = normalizeReading(item.reading);
-  const choices = [item];
-  const usedDisplayValues = new Set([
-    mode === "reading-to-kanji" ? item.kanji : normalizeReading(item.reading)
-  ]);
-
-  const candidates = source.filter((candidate) => {
-    const sameKanjiAndReading = candidate.kanji === item.kanji && candidate.reading === item.reading;
-    const sameReading = normalizeReading(candidate.reading) === currentReading;
-
-    if (sameKanjiAndReading || sameReading) {
-      return false;
-    }
-
-    const displayValue = mode === "reading-to-kanji"
-      ? candidate.kanji
-      : normalizeReading(candidate.reading);
-
-    return !usedDisplayValues.has(displayValue);
-  });
-
-  shuffle(candidates);
-
-  for (const candidate of candidates) {
-    const displayValue = mode === "reading-to-kanji"
-      ? candidate.kanji
-      : normalizeReading(candidate.reading);
-
-    if (!usedDisplayValues.has(displayValue)) {
-      choices.push(candidate);
-      usedDisplayValues.add(displayValue);
-    }
-
-    if (choices.length >= MAX_OPTION_COUNT) {
-      break;
-    }
-  }
-
-  return choices;
-}
-
-function buildQuiz() {
-  const total = Math.min(Math.max(1, Number(questionCountInput.value)), MAX_QUESTION_COUNT);
-  const { data: filtered, error } = getFilteredSourceData();
-
-  if (error) {
-    showError(error);
-    return false;
-  }
-
-  if (filtered.length === 0) {
-    showError("Không tìm thấy mục nào phù hợp với phạm vi bài đã chọn.");
-    return false;
-  }
-
-  if (total > filtered.length) {
-    showError(`Chỉ có ${filtered.length} mục phù hợp với lựa chọn của bạn. Vui lòng giảm số câu.`);
-    return false;
-  }
-
-  hideError();
-  shuffle(filtered);
-  quizItems = filtered.slice(0, total).map(item => ({ ...item }));
-  score = 0;
-  currentIndex = 0;
-  selectedChoice = null;
-  selectedButton = null;
-  return true;
-}
-
-function renderQuestion() {
-  if (currentIndex >= quizItems.length) {
-    questionPrompt.textContent = "Hoàn thành bài luyện tập!";
-    optionsContainer.innerHTML = "";
-    quizStatus.textContent = `Bạn đã hoàn thành ${quizItems.length} câu.`;
-    scoreInfo.textContent = `Điểm của bạn: ${score} / ${quizItems.length}`;
-    confirmBtn.classList.add("hidden");
-    nextBtn.classList.add("hidden");
-    return;
-  }
-
-  const item = quizItems[currentIndex];
-  const mode = modeSelect.value;
-  const source = getSourceData();
-  const choices = buildChoices(item, source, mode);
-
-  shuffle(choices);
-  optionsContainer.innerHTML = "";
-  optionsContainer.classList.toggle("kanji-options", mode === "reading-to-kanji");
-  selectedChoice = null;
-  selectedButton = null;
-
-  if (mode === "reading-to-kanji") {
-    questionPrompt.textContent = `Câu ${currentIndex + 1}/${quizItems.length}: Chọn Kanji tương ứng với "${item.reading}"`;
-  } else {
-    questionPrompt.textContent = `Câu ${currentIndex + 1}/${quizItems.length}: Chọn Âm Hán tương ứng với "${item.kanji}"`;
-  }
-
-  choices.forEach((choice) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = mode === "reading-to-kanji" ? choice.kanji : choice.reading;
-    button.addEventListener("click", () => selectAnswer(choice, button));
-    optionsContainer.appendChild(button);
-  });
-
-  quizStatus.textContent = `Câu ${currentIndex + 1} / ${quizItems.length}`;
-  scoreInfo.textContent = `Điểm hiện tại: ${score} / ${currentIndex}`;
-  confirmBtn.classList.remove("hidden");
-  confirmBtn.disabled = false;
-  nextBtn.classList.add("hidden");
-}
-
-function showQuizArea() {
-  setActiveTab("practicePanel");
-  quizArea.classList.remove("hidden");
-  renderQuestion();
-  quizArea.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-function selectAnswer(choice, button) {
-  if (selectedButton) {
-    selectedButton.classList.remove("selected");
-  }
-
-  selectedChoice = choice;
-  selectedButton = button;
-  button.classList.add("selected");
-}
-
-function confirmAnswer() {
-  if (!selectedChoice) {
-    showError("Vui lòng chọn đáp án trước khi xác nhận.");
-    return;
-  }
-
-  hideError();
-  const item = quizItems[currentIndex];
-  const isCorrect = selectedChoice.kanji === item.kanji && selectedChoice.reading === item.reading;
-
-  selectedButton.classList.remove("selected");
-  selectedButton.classList.add(isCorrect ? "correct" : "wrong");
-
-  if (isCorrect) {
-    score += 1;
-  }
-
-  Array.from(optionsContainer.children).forEach((option) => {
-    option.disabled = true;
-    const matchesCorrect = modeSelect.value === "reading-to-kanji"
-      ? option.textContent === item.kanji
-      : normalizeReading(option.textContent) === normalizeReading(item.reading);
-
-    if (matchesCorrect) {
-      option.classList.add("correct");
-    }
-  });
-
-  scoreInfo.textContent = `Điểm hiện tại: ${score} / ${currentIndex + 1}`;
-  confirmBtn.classList.add("hidden");
-  nextBtn.classList.remove("hidden");
-}
-
-function isTypingTarget(target) {
-  return ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName);
-}
-
-function getEnabledOptionButtons() {
-  return Array.from(optionsContainer.querySelectorAll("button:not(:disabled)"));
-}
-
-function getOptionColumnCount() {
-  const columns = window.getComputedStyle(optionsContainer).gridTemplateColumns;
-  return columns ? columns.split(" ").filter(Boolean).length : 1;
-}
-
-function moveSelectedOption(direction) {
-  const options = getEnabledOptionButtons();
-
-  if (options.length === 0 || quizArea.classList.contains("hidden")) {
-    return;
-  }
-
-  const currentIndex = selectedButton ? options.indexOf(selectedButton) : -1;
-  const columnCount = Math.max(1, getOptionColumnCount());
-  let nextIndex = currentIndex >= 0 ? currentIndex : 0;
-
-  if (direction === "ArrowRight") {
-    nextIndex = currentIndex < 0 ? 0 : Math.min(options.length - 1, currentIndex + 1);
-  } else if (direction === "ArrowLeft") {
-    nextIndex = currentIndex < 0 ? 0 : Math.max(0, currentIndex - 1);
-  } else if (direction === "ArrowDown") {
-    nextIndex = currentIndex < 0 ? 0 : Math.min(options.length - 1, currentIndex + columnCount);
-  } else if (direction === "ArrowUp") {
-    nextIndex = currentIndex < 0 ? 0 : Math.max(0, currentIndex - columnCount);
-  }
-
-  options[nextIndex].click();
-  options[nextIndex].focus({ preventScroll: true });
-}
+import { elements } from "./dom.js";
+import {
+  autoLoadDefaultUrl,
+  getKanjiData,
+  parseCsv,
+  parseExcel,
+  parseRemoteUrl,
+  resetKanjiData
+} from "./data.js";
+import {
+  confirmAnswer,
+  getEnabledOptionButtons,
+  hasSelectedChoice,
+  moveSelectedOption,
+  nextQuestion,
+  resetQuizState,
+  setMaxQuestionCount,
+  startQuiz
+} from "./quiz.js";
+import {
+  loadRadicalsData,
+  renderRadicals
+} from "./radicals.js";
+import {
+  hideError,
+  isTypingTarget,
+  loadThemePreference,
+  setActiveTab,
+  setModeSelectValue,
+  showError,
+  toggleTheme
+} from "./ui.js";
 
 function handleKeyboardShortcut(event) {
-  if (practicePanel.classList.contains("hidden")) {
+  if (elements.practicePanel.classList.contains("hidden")) {
     return;
   }
 
@@ -820,10 +42,10 @@ function handleKeyboardShortcut(event) {
 
   if (
     event.key === "Enter" &&
-    quizArea.classList.contains("hidden")
+    elements.quizArea.classList.contains("hidden")
   ) {
     event.preventDefault();
-    startBtn.click();
+    elements.startBtn.click();
     return;
   }
 
@@ -833,7 +55,7 @@ function handleKeyboardShortcut(event) {
 
   if (event.key === "r" || event.key === "R") {
     event.preventDefault();
-    resetBtn.click();
+    elements.resetBtn.click();
     return;
   }
 
@@ -855,105 +77,108 @@ function handleKeyboardShortcut(event) {
 
   event.preventDefault();
 
-  if (!nextBtn.classList.contains("hidden")) {
-    nextBtn.click();
+  if (!elements.nextBtn.classList.contains("hidden")) {
+    elements.nextBtn.click();
     return;
   }
 
-  if (!confirmBtn.classList.contains("hidden")) {
-    if (!selectedChoice) {
+  if (!elements.confirmBtn.classList.contains("hidden")) {
+    if (!hasSelectedChoice()) {
       const firstOption = getEnabledOptionButtons()[0];
       firstOption?.click();
     }
 
-    confirmBtn.click();
+    elements.confirmBtn.click();
   }
 }
 
-fileInput.addEventListener("change", (event) => {
-  const file = event.target.files[0];
+function bindEvents() {
+  elements.fileInput.addEventListener("change", (event) => {
+    const file = event.target.files[0];
 
-  if (!file) {
+    if (!file) {
+      return;
+    }
+
+    const fileName = file.name.toLowerCase();
+
+    if (fileName.endsWith(".csv")) {
+      parseCsv(file);
+    } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
+      parseExcel(file);
+    } else {
+      showError("Chỉ hỗ trợ file Excel (.xlsx, .xls) và CSV.");
+    }
+  });
+
+  elements.importBtn.addEventListener("click", () => {
+    const url = elements.urlInput.value.trim();
+
+    if (!url) {
+      showError("Vui lòng nhập URL của file Excel hoặc CSV.");
+      return;
+    }
+
+    parseRemoteUrl(url);
+  });
+
+  elements.maxQuestionBtn.addEventListener("click", setMaxQuestionCount);
+  elements.themeToggleBtn.addEventListener("click", toggleTheme);
+  elements.radicalsSearchInput.addEventListener("input", renderRadicals);
+  elements.radicalsStrokeFilter.addEventListener("change", renderRadicals);
+
+  elements.modeSegmentButtons.forEach((button) => {
+    button.addEventListener("click", () => setModeSelectValue(button.dataset.modeValue));
+  });
+
+  elements.tabButtons.forEach((button) => {
+    button.addEventListener("click", () => setActiveTab(button.dataset.tabTarget));
+  });
+
+  elements.startBtn.addEventListener("click", () => {
+    if (!getKanjiData().length) {
+      elements.fileInfo.textContent = "Đang dùng dữ liệu mẫu. Bạn có thể tải file Excel/CSV để dùng dữ liệu của riêng mình.";
+    }
+
+    startQuiz();
+  });
+
+  elements.confirmBtn.addEventListener("click", confirmAnswer);
+  document.addEventListener("keydown", handleKeyboardShortcut);
+
+  elements.nextBtn.addEventListener("click", nextQuestion);
+
+  elements.resetBtn.addEventListener("click", () => {
+    elements.quizArea.classList.add("hidden");
+    resetKanjiData();
+    resetQuizState();
+    elements.fileInfo.textContent = "Đã đặt lại. Đang tải dữ liệu từ URL...";
+    hideError();
+    autoLoadDefaultUrl();
+  });
+
+  window.addEventListener("online", autoLoadDefaultUrl);
+}
+
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) {
     return;
   }
 
-  const fileName = file.name.toLowerCase();
-
-  if (fileName.endsWith(".csv")) {
-    parseCsv(file);
-  } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
-    parseExcel(file);
-  } else {
-    showError("Chỉ hỗ trợ file Excel (.xlsx, .xls) và CSV.");
-  }
-});
-
-importBtn.addEventListener("click", () => {
-  const url = urlInput.value.trim();
-
-  if (!url) {
-    showError("Vui lòng nhập URL của file Excel hoặc CSV.");
-    return;
-  }
-
-  parseRemoteUrl(url);
-});
-
-maxQuestionBtn.addEventListener("click", setMaxQuestionCount);
-themeToggleBtn.addEventListener("click", toggleTheme);
-radicalsSearchInput.addEventListener("input", renderRadicals);
-radicalsStrokeFilter.addEventListener("change", renderRadicals);
-modeSegmentButtons.forEach((button) => {
-  button.addEventListener("click", () => setModeSelectValue(button.dataset.modeValue));
-});
-tabButtons.forEach((button) => {
-  button.addEventListener("click", () => setActiveTab(button.dataset.tabTarget));
-});
-
-startBtn.addEventListener("click", () => {
-  if (!kanjiData.length) {
-    fileInfo.textContent = "Đang dùng dữ liệu mẫu. Bạn có thể tải file Excel/CSV để dùng dữ liệu của riêng mình.";
-  }
-
-  if (!buildQuiz()) {
-    return;
-  }
-
-  showQuizArea();
-});
-
-confirmBtn.addEventListener("click", confirmAnswer);
-document.addEventListener("keydown", handleKeyboardShortcut);
-
-nextBtn.addEventListener("click", () => {
-  currentIndex += 1;
-  renderQuestion();
-});
-
-resetBtn.addEventListener("click", () => {
-  quizArea.classList.add("hidden");
-  kanjiData = [];
-  quizItems = [];
-  currentIndex = 0;
-  score = 0;
-  fileInfo.textContent = "Đã đặt lại. Đang tải dữ liệu từ URL...";
-  hideError();
-  autoLoadDefaultUrl();
-});
-
-window.addEventListener("online", autoLoadDefaultUrl);
-document.addEventListener("DOMContentLoaded", () => {
-  loadThemePreference();
-  setModeSelectValue(modeSelect.value);
-  setActiveTab("practicePanel");
-  autoLoadDefaultUrl();
-  loadRadicalsData();
-});
-
-if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("./sw.js").catch(() => {
       // PWA vẫn chạy bình thường nếu trình duyệt không cho đăng ký service worker.
     });
   });
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+  bindEvents();
+  loadThemePreference();
+  setModeSelectValue(elements.modeSelect.value);
+  setActiveTab("practicePanel");
+  autoLoadDefaultUrl();
+  loadRadicalsData();
+});
+
+registerServiceWorker();

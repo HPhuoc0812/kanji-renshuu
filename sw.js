@@ -1,4 +1,4 @@
-const CACHE_NAME = "kanji-renshuu-v26";
+const CACHE_NAME = "kanji-renshuu-v29";
 
 const APP_SHELL = [
   "",
@@ -6,6 +6,14 @@ const APP_SHELL = [
   "manifest.webmanifest",
   "assets/css/styles.css",
   "assets/js/app.js",
+  "assets/js/constants.js",
+  "assets/js/data.js",
+  "assets/js/dom.js",
+  "assets/js/quiz.js",
+  "assets/js/radicals.js",
+  "assets/js/ui.js",
+  "assets/js/utils.js",
+  "assets/data/kanji-cache.json",
   "assets/data/radicals.json",
   "libs/xlsx.full.min.js",
   "assets/icons/icon-192.png",
