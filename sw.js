@@ -1,4 +1,4 @@
-const CACHE_NAME = "kanji-renshuu-v29";
+const CACHE_NAME = "kanji-renshuu-v30";
 
 const APP_SHELL = [
   "",
@@ -63,6 +63,18 @@ self.addEventListener("fetch", (event) => {
 
         return cached || fresh;
       })
+    );
+    return;
+  }
+
+  const url = new URL(event.request.url);
+  const isExternal = url.origin !== self.registration.scope.replace(/\/$/, "").split("/").slice(0, 3).join("/");
+  
+  if (isExternal) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => response)
+        .catch(() => caches.match(event.request))  // offline thì fallback cache
     );
     return;
   }

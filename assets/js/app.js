@@ -5,7 +5,9 @@ import {
   parseCsv,
   parseExcel,
   parseRemoteUrl,
-  resetKanjiData
+  resetKanjiData,
+  saveUrlToStorage,
+  loadUrlFromStorage
 } from "./data.js";
 import {
   confirmAnswer,
@@ -111,15 +113,20 @@ function bindEvents() {
     }
   });
 
-  elements.importBtn.addEventListener("click", () => {
+  elements.importBtn.addEventListener("click", async () => {
     const url = elements.urlInput.value.trim();
+
+    console.log("Import button clicked, URL:", url);
 
     if (!url) {
       showError("Vui lòng nhập URL của file Excel hoặc CSV.");
       return;
     }
 
-    parseRemoteUrl(url);
+    console.log("Starting parseRemoteUrl with URL:", url);
+    saveUrlToStorage(url);
+    await parseRemoteUrl(url);
+    console.log("parseRemoteUrl completed");
   });
 
   elements.maxQuestionBtn.addEventListener("click", setMaxQuestionCount);
@@ -176,6 +183,13 @@ document.addEventListener("DOMContentLoaded", () => {
   bindEvents();
   loadThemePreference();
   setModeSelectValue(elements.modeSelect.value);
+  
+  // Restore URL from storage if available
+  const savedUrl = loadUrlFromStorage();
+  if (savedUrl && !elements.urlInput.value.includes(savedUrl)) {
+    elements.urlInput.value = savedUrl;
+  }
+  
   setActiveTab("practicePanel");
   autoLoadDefaultUrl();
   loadRadicalsData();
