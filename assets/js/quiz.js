@@ -12,6 +12,10 @@ let currentIndex = 0;
 let score = 0;
 let selectedChoice = null;
 let selectedButton = null;
+let quizHardModeEnabled = false;
+let quizTimeLimitSeconds = null;
+let currentStreak = 0;
+let maxStreak = 0;
 
 export function resetQuizState() {
   quizItems = [];
@@ -19,6 +23,132 @@ export function resetQuizState() {
   score = 0;
   selectedChoice = null;
   selectedButton = null;
+  quizHardModeEnabled = false;
+  quizTimeLimitSeconds = null;
+  currentStreak = 0;
+  maxStreak = 0;
+  stopQuestionTimer();
+  resetTimerDisplay();
+}
+
+export function refreshQuestionTimer() {
+  const isQuizActive = currentIndex < quizItems.length && !elements.quizArea.classList.contains("hidden");
+
+  if (isQuizActive) {
+    return;
+  }
+
+  resetTimerDisplay();
+}
+
+let questionTimerId = null;
+let questionTimerEnd = 0;
+const TIMER_STEP_MS = 100;
+const DEFAULT_TIME_LIMIT_SECONDS = 12;
+const MIN_TIME_LIMIT_SECONDS = 3;
+
+function getActiveTimeLimit() {
+  const value = Number(elements.timeLimitInput?.value);
+  return Number.isFinite(value) && value >= MIN_TIME_LIMIT_SECONDS ? Math.round(value) : null;
+}
+
+function resetTimerDisplay() {
+  if (!elements.timerRow) {
+    return;
+  }
+
+  elements.timerRow.classList.add("hidden");
+  elements.timerFill.style.width = "0%";
+  elements.timerFill.classList.remove("timer-warning");
+  elements.timerText.textContent = `0s`;
+}
+
+function updateStreakDisplay() {
+  if (!elements.streakDisplay) {
+    return;
+  }
+
+  if (quizHardModeEnabled && currentIndex < quizItems.length) {
+    elements.streakDisplay.classList.remove("hidden");
+    elements.currentStreakValue.textContent = currentStreak;
+  } else {
+    elements.streakDisplay.classList.add("hidden");
+  }
+}
+
+function stopQuestionTimer() {
+  if (questionTimerId !== null) {
+    window.clearInterval(questionTimerId);
+    questionTimerId = null;
+  }
+}
+
+function startQuestionTimer() {
+  if (!quizHardModeEnabled || !elements.timerRow) {
+    resetTimerDisplay();
+    return;
+  }
+
+  if (quizTimeLimitSeconds === null) {
+    resetTimerDisplay();
+    return;
+  }
+
+  stopQuestionTimer();
+  questionTimerEnd = Date.now() + quizTimeLimitSeconds * 1000;
+
+  elements.timerRow.classList.remove("hidden");
+  elements.timerText.textContent = `${quizTimeLimitSeconds}s`;
+  elements.timerFill.style.width = "100%";
+  elements.timerFill.classList.remove("timer-warning");
+
+  questionTimerId = window.setInterval(() => {
+    const remainingMs = Math.max(0, questionTimerEnd - Date.now());
+    const remainingSeconds = Math.ceil(remainingMs / 1000);
+    const percentage = Math.max(0, (remainingMs / (quizTimeLimitSeconds * 1000)) * 100);
+
+    elements.timerText.textContent = `${remainingSeconds}s`;
+    elements.timerFill.style.width = `${percentage}%`;
+    elements.timerFill.classList.toggle("timer-warning", percentage <= 25);
+
+    if (remainingMs <= 0) {
+      handleTimeExpired();
+    }
+  }, TIMER_STEP_MS);
+}
+
+function handleTimeExpired() {
+  stopQuestionTimer();
+  if (!quizItems[currentIndex]) {
+    return;
+  }
+
+  if (quizHardModeEnabled) {
+    currentStreak = 0;
+  }
+
+  selectedChoice = null;
+  if (selectedButton) {
+    selectedButton.classList.remove("selected");
+    selectedButton = null;
+  }
+
+  Array.from(elements.optionsContainer.children).forEach((option) => {
+    option.disabled = true;
+    const matchesCorrect = elements.modeSelect.value === "reading-to-kanji"
+      ? option.textContent === quizItems[currentIndex].kanji
+      : normalizeReading(option.textContent) === normalizeReading(quizItems[currentIndex].reading);
+
+    if (matchesCorrect) {
+      option.classList.add("correct");
+    }
+  });
+
+  elements.scoreInfo.textContent = `Điểm hiện tại: ${score} / ${currentIndex}`;
+  elements.confirmBtn.classList.add("hidden");
+  elements.nextBtn.classList.remove("hidden");
+  updateStreakDisplay();
+  showError("Hết giờ! Đáp án đúng đã hiển thị.");
 }
 
 function getFilteredSourceFromInputs() {
@@ -118,13 +248,21 @@ function buildQuiz() {
 }
 
 export function renderQuestion() {
+  hideError();
+
   if (currentIndex >= quizItems.length) {
+    stopQuestionTimer();
+    resetTimerDisplay();
     elements.questionPrompt.textContent = "Hoàn thành bài luyện tập!";
     elements.optionsContainer.innerHTML = "";
     elements.quizStatus.textContent = `Bạn đã hoàn thành ${quizItems.length} câu.`;
     elements.scoreInfo.textContent = `Điểm của bạn: ${score} / ${quizItems.length}`;
     elements.confirmBtn.classList.add("hidden");
     elements.nextBtn.classList.add("hidden");
+
+    if (quizHardModeEnabled) {
+      showQuizResultsModal();
+    }
     return;
   }
 
@@ -132,6 +270,9 @@ export function renderQuestion() {
   const mode = elements.modeSelect.value;
   const source = getSourceData();
   const choices = buildChoices(item, source, mode);
+
+  stopQuestionTimer();
+  startQuestionTimer();
 
   shuffle(choices);
   elements.optionsContainer.innerHTML = "";
@@ -158,9 +299,25 @@ export function renderQuestion() {
   elements.confirmBtn.classList.remove("hidden");
   elements.confirmBtn.disabled = false;
   elements.nextBtn.classList.add("hidden");
+
+  updateStreakDisplay();
+  refreshQuestionTimer();
 }
 
 export function startQuiz() {
+  const requestedHardMode = elements.hardModeToggle?.checked ?? false;
+  const requestedTimeLimit = getActiveTimeLimit();
+
+  if (requestedHardMode && requestedTimeLimit === null) {
+    showError(`Thời gian mỗi câu phải lớn hơn hoặc bằng ${MIN_TIME_LIMIT_SECONDS} giây.`);
+    return false;
+  }
+
+  quizHardModeEnabled = requestedHardMode;
+  quizTimeLimitSeconds = requestedHardMode ? requestedTimeLimit : null;
+  currentStreak = 0;
+  maxStreak = 0;
+
   if (!buildQuiz()) {
     return false;
   }
@@ -188,6 +345,7 @@ export function confirmAnswer() {
     return;
   }
 
+  stopQuestionTimer();
   hideError();
   const item = quizItems[currentIndex];
   const isCorrect = selectedChoice.kanji === item.kanji && selectedChoice.reading === item.reading;
@@ -197,6 +355,16 @@ export function confirmAnswer() {
 
   if (isCorrect) {
     score += 1;
+    if (quizHardModeEnabled) {
+      currentStreak += 1;
+      if (currentStreak > maxStreak) {
+        maxStreak = currentStreak;
+      }
+    }
+  } else {
+    if (quizHardModeEnabled) {
+      currentStreak = 0;
+    }
   }
 
   Array.from(elements.optionsContainer.children).forEach((option) => {
@@ -213,6 +381,7 @@ export function confirmAnswer() {
   elements.scoreInfo.textContent = `Điểm hiện tại: ${score} / ${currentIndex + 1}`;
   elements.confirmBtn.classList.add("hidden");
   elements.nextBtn.classList.remove("hidden");
+  updateStreakDisplay();
 }
 
 export function nextQuestion() {
@@ -256,4 +425,15 @@ export function moveSelectedOption(direction) {
 
 export function hasSelectedChoice() {
   return Boolean(selectedChoice);
+}
+
+function showQuizResultsModal() {
+  const modal = elements.quizResultsModal;
+  if (!modal) return;
+
+  elements.resultsScore.textContent = `${score} / ${quizItems.length}`;
+  elements.resultsStreak.textContent = `${maxStreak}`;
+
+  modal.classList.remove("hidden");
+  modal.showModal?.();
 }

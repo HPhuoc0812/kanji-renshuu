@@ -76,6 +76,20 @@
         </div>
       </div>
 
+      <div class="grid grid-2 form-row">
+        <div>
+          <label for="hardModeToggle">Chế độ khó</label>
+          <label class="checkbox-label">
+            <input id="hardModeToggle" type="checkbox" />
+            Giới hạn thời gian
+          </label>
+        </div>
+        <div>
+          <label for="timeLimitInput">Thời gian mỗi câu</label>
+          <input id="timeLimitInput" type="number" min="3" max="60" value="12" />
+        </div>
+      </div>
+
       <div class="grid url-grid form-row">
         <div>
           <label for="urlInput">URL file Excel / CSV / Google Sheets</label>
@@ -97,11 +111,23 @@
     <section id="quizArea" class="card quiz-card hidden">
       <div class="quiz-topline">
         <div class="status" id="quizStatus"></div>
+        <div id="streakDisplay" class="streak-display hidden">
+          🔥 Streak: <span id="currentStreakValue">0</span>
+        </div>
         <div class="footer" id="scoreInfo"></div>
       </div>
 
       <div class="question-box">
         <h2 id="questionPrompt">Câu hỏi sẽ xuất hiện ở đây</h2>
+        <div id="timerRow" class="timer-row hidden">
+          <div class="timer-meta">
+            <span>Thời gian còn lại:</span>
+            <strong id="timerText">0s</strong>
+          </div>
+          <div class="timer-bar" aria-hidden="true">
+            <span id="timerFill" class="timer-bar-fill"></span>
+          </div>
+        </div>
         <div class="options" id="options"></div>
       </div>
 
@@ -140,6 +166,23 @@
     </section>
 
   </main>
+
+  <dialog id="quizResultsModal" class="quiz-results-modal hidden">
+    <div class="modal-content">
+      <h2>Hoàn thành bài luyện tập!</h2>
+      <div class="results-stats">
+        <div class="result-item">
+          <span class="result-label">Điểm:</span>
+          <span id="resultsScore" class="result-value">0 / 0</span>
+        </div>
+        <div class="result-item">
+          <span class="result-label">🔥 Streak Cao Nhất:</span>
+          <span id="resultsStreak" class="result-value">0</span>
+        </div>
+      </div>
+      <button id="closeResultsBtn" type="button" class="primary">OK</button>
+    </div>
+  </dialog>
 
   <script src="libs/xlsx.full.min.js"></script>
   <script type="module" src="assets/js/app.js"></script>

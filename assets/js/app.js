@@ -15,6 +15,7 @@ import {
   hasSelectedChoice,
   moveSelectedOption,
   nextQuestion,
+  refreshQuestionTimer,
   resetQuizState,
   setMaxQuestionCount,
   startQuiz
@@ -138,6 +139,18 @@ function bindEvents() {
     button.addEventListener("click", () => setModeSelectValue(button.dataset.modeValue));
   });
 
+  elements.hardModeToggle.addEventListener("change", () => {
+    if (elements.quizArea.classList.contains("hidden")) {
+      refreshQuestionTimer();
+    }
+  });
+
+  elements.timeLimitInput.addEventListener("input", () => {
+    if (elements.quizArea.classList.contains("hidden")) {
+      refreshQuestionTimer();
+    }
+  });
+
   elements.tabButtons.forEach((button) => {
     button.addEventListener("click", () => setActiveTab(button.dataset.tabTarget));
   });
@@ -154,6 +167,11 @@ function bindEvents() {
   document.addEventListener("keydown", handleKeyboardShortcut);
 
   elements.nextBtn.addEventListener("click", nextQuestion);
+
+  elements.closeResultsBtn?.addEventListener("click", () => {
+    elements.quizResultsModal?.close?.();
+    elements.quizResultsModal?.classList.add("hidden");
+  });
 
   elements.resetBtn.addEventListener("click", () => {
     elements.quizArea.classList.add("hidden");

@@ -4,6 +4,8 @@ export const elements = {
   importBtn: document.getElementById("importBtn"),
   modeSelect: document.getElementById("modeSelect"),
   modeSegmentButtons: Array.from(document.querySelectorAll("[data-mode-value]")),
+  hardModeToggle: document.getElementById("hardModeToggle"),
+  timeLimitInput: document.getElementById("timeLimitInput"),
   questionCountInput: document.getElementById("questionCount"),
   maxQuestionBtn: document.getElementById("maxQuestionBtn"),
   themeToggleBtn: document.getElementById("themeToggleBtn"),
@@ -12,6 +14,11 @@ export const elements = {
   startBtn: document.getElementById("startBtn"),
   quizArea: document.getElementById("quizArea"),
   questionPrompt: document.getElementById("questionPrompt"),
+  timerRow: document.getElementById("timerRow"),
+  timerText: document.getElementById("timerText"),
+  timerFill: document.getElementById("timerFill"),
+  streakDisplay: document.getElementById("streakDisplay"),
+  currentStreakValue: document.getElementById("currentStreakValue"),
   optionsContainer: document.getElementById("options"),
   quizStatus: document.getElementById("quizStatus"),
   scoreInfo: document.getElementById("scoreInfo"),
@@ -27,5 +34,9 @@ export const elements = {
   radicalsMessage: document.getElementById("radicalsMessage"),
   tabButtons: Array.from(document.querySelectorAll("[data-tab-target]")),
   tabPanels: Array.from(document.querySelectorAll(".tab-panel")),
-  practicePanel: document.getElementById("practicePanel")
+  practicePanel: document.getElementById("practicePanel"),
+  quizResultsModal: document.getElementById("quizResultsModal"),
+  resultsScore: document.getElementById("resultsScore"),
+  resultsStreak: document.getElementById("resultsStreak"),
+  closeResultsBtn: document.getElementById("closeResultsBtn")
 };

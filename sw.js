@@ -1,4 +1,4 @@
-const CACHE_NAME = "kanji-renshuu-v30";
+const CACHE_NAME = "kanji-renshuu-v33";
 
 const APP_SHELL = [
   "",
@@ -75,6 +75,23 @@ self.addEventListener("fetch", (event) => {
       fetch(event.request)
         .then((response) => response)
         .catch(() => caches.match(event.request))  // offline thì fallback cache
+    );
+    return;
+  }
+
+  const isNetworkFirst = ["document", "script", "style"].includes(event.request.destination);
+
+  if (isNetworkFirst) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
     );
     return;
   }
