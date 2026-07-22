@@ -892,6 +892,8 @@ button:disabled {
 .whiteboard-tools {
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
   gap: 4px;
 }
 
@@ -1182,6 +1184,10 @@ body.dark-mode .wb-toggle-btn.active {
   .compact-status {
     margin-top: 8px;
     white-space: normal;
+  }
+
+  .whiteboard-title {
+    display: none;
   }
 
   .radicals-grid {
