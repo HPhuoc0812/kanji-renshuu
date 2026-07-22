@@ -5,6 +5,7 @@ export const elements = {
   modeSelect: document.getElementById("modeSelect"),
   modeSegmentButtons: Array.from(document.querySelectorAll("[data-mode-value]")),
   hardModeToggle: document.getElementById("hardModeToggle"),
+  nightmareModeToggle: document.getElementById("nightmareModeToggle"),
   timeLimitInput: document.getElementById("timeLimitInput"),
   questionCountInput: document.getElementById("questionCount"),
   maxQuestionBtn: document.getElementById("maxQuestionBtn"),

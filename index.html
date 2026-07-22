@@ -77,12 +77,21 @@
       </div>
 
       <div class="grid grid-2 form-row">
-        <div>
-          <label for="hardModeToggle">Chế độ khó</label>
-          <label class="checkbox-label">
-            <input id="hardModeToggle" type="checkbox" />
-            Giới hạn thời gian
-          </label>
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div>
+            <label for="hardModeToggle">Chế độ khó</label>
+            <label class="checkbox-label">
+              <input id="hardModeToggle" type="checkbox" />
+              Giới hạn thời gian
+            </label>
+          </div>
+          <div>
+            <label for="nightmareModeToggle" style="color: var(--rose);">Chế độ Ác mộng</label>
+            <label class="checkbox-label" title="Sinh ra các đáp án sai là các chữ Kanji có hình dáng cực kỳ giống với đáp án đúng để đánh lừa">
+              <input id="nightmareModeToggle" type="checkbox" />
+              Kanji dễ nhầm lẫn
+            </label>
+          </div>
         </div>
         <div>
           <label for="timeLimitInput">Thời gian mỗi câu</label>

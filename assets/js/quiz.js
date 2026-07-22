@@ -6,6 +6,7 @@ import {
 } from "./data.js";
 import { hideError, setActiveTab, showError } from "./ui.js";
 import { normalizeReading, shuffle } from "./utils.js";
+import { getSimilarKanjis } from "./similar-kanji.js";
 
 let quizItems = [];
 let currentIndex = 0;
@@ -13,6 +14,7 @@ let score = 0;
 let selectedChoice = null;
 let selectedButton = null;
 let quizHardModeEnabled = false;
+let quizNightmareModeEnabled = false;
 let quizTimeLimitSeconds = null;
 let currentStreak = 0;
 let maxStreak = 0;
@@ -198,7 +200,19 @@ function buildChoices(item, source, mode) {
     return !usedDisplayValues.has(displayValue);
   });
 
-  shuffle(candidates);
+  // If Nightmare mode is enabled, sort candidates to prioritize visually similar kanji
+  if (quizNightmareModeEnabled) {
+    const similarKanjiList = getSimilarKanjis(item.kanji);
+    candidates.sort((a, b) => {
+      const aIsSimilar = similarKanjiList.includes(a.kanji) ? 1 : 0;
+      const bIsSimilar = similarKanjiList.includes(b.kanji) ? 1 : 0;
+      // Also prioritize slightly by random to shuffle the similar ones
+      if (aIsSimilar === bIsSimilar) return Math.random() - 0.5;
+      return bIsSimilar - aIsSimilar;
+    });
+  } else {
+    shuffle(candidates);
+  }
 
   for (const candidate of candidates) {
     const displayValue = mode === "reading-to-kanji"
@@ -306,6 +320,7 @@ export function renderQuestion() {
 
 export function startQuiz() {
   const requestedHardMode = elements.hardModeToggle?.checked ?? false;
+  const requestedNightmareMode = elements.nightmareModeToggle?.checked ?? false;
   const requestedTimeLimit = getActiveTimeLimit();
 
   if (requestedHardMode && requestedTimeLimit === null) {
@@ -314,6 +329,7 @@ export function startQuiz() {
   }
 
   quizHardModeEnabled = requestedHardMode;
+  quizNightmareModeEnabled = requestedNightmareMode;
   quizTimeLimitSeconds = requestedHardMode ? requestedTimeLimit : null;
   currentStreak = 0;
   maxStreak = 0;

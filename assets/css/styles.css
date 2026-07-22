@@ -532,6 +532,18 @@ select:focus {
   background: var(--field);
 }
 
+input:checked + .slider {
+  background: var(--teal);
+}
+
+input:checked + .slider-red {
+  background: var(--rose);
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px var(--teal);
+}
+
 select option {
   background: var(--field);
   color: var(--ink);
