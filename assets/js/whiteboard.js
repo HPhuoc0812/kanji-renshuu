@@ -3,13 +3,16 @@
  * Supports: PointerEvents, requestAnimationFrame render loop, Bézier smoothing.
  */
 
+import { getCurrentKanji } from "./quiz.js";
+import { playKanjiGuide } from "./kanji-guide.js";
+
 const MAX_UNDO_STEPS = 30;
 const SMOOTHING_FACTOR = 0.45;
 
 let canvas = null;
 let ctx = null;
 let isDrawing = false;
-let strokeWidth = 2;
+let strokeWidth = 4;
 let undoStack = [];
 let canvasRect = null; // Cached rect
 
@@ -311,6 +314,30 @@ export function initWhiteboard() {
   // Toggle button
   const toggleBtn = document.getElementById("whiteboardToggleBtn");
   if (toggleBtn) toggleBtn.addEventListener("click", toggleWhiteboard);
+
+  // Guide button
+  const guideBtn = document.getElementById("wbGuideBtn");
+  const guideContainer = document.getElementById("kanjiGuideContainer");
+  if (guideBtn && guideContainer) {
+    guideBtn.addEventListener("click", () => {
+      const isActive = guideBtn.classList.contains("active");
+      if (isActive) {
+        // Tắt chế độ chữ mẫu
+        guideBtn.classList.remove("active");
+        guideContainer.innerHTML = "";
+      } else {
+        // Bật chế độ chữ mẫu
+        const kanji = getCurrentKanji();
+        if (kanji) {
+          guideBtn.classList.add("active");
+          clear(); // Xóa bảng vẽ nháp hiện tại để dọn chỗ cho chữ mẫu
+          playKanjiGuide(kanji, guideContainer);
+        } else {
+          alert("Không có chữ Kanji nào để hướng dẫn lúc này.");
+        }
+      }
+    });
+  }
 
   // Pointer Events (replaces mouse and touch events)
   canvas.addEventListener("pointerdown", handlePointerDown, { passive: false });

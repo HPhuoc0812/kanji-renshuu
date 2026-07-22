@@ -437,3 +437,10 @@ function showQuizResultsModal() {
   modal.classList.remove("hidden");
   modal.showModal?.();
 }
+
+export function getCurrentKanji() {
+  if (currentIndex >= 0 && currentIndex < quizItems.length) {
+    return quizItems[currentIndex].kanji;
+  }
+  return null;
+}
