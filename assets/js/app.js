@@ -33,8 +33,24 @@ import {
   showError,
   toggleTheme
 } from "./ui.js";
+import {
+  initWhiteboard,
+  toggleWhiteboard,
+  undo as whiteboardUndo
+} from "./whiteboard.js";
 
 function handleKeyboardShortcut(event) {
+  // Ctrl+Z for whiteboard undo (works globally when whiteboard is visible)
+  if ((event.ctrlKey || event.metaKey) && event.key === "z") {
+    const panel = elements.whiteboardPanel;
+
+    if (panel && !panel.classList.contains("hidden")) {
+      event.preventDefault();
+      whiteboardUndo();
+      return;
+    }
+  }
+
   if (elements.practicePanel.classList.contains("hidden")) {
     return;
   }
@@ -65,6 +81,13 @@ function handleKeyboardShortcut(event) {
   if (event.key === "m" || event.key === "M") {
     event.preventDefault();
     setMaxQuestionCount();
+    return;
+  }
+
+  // W to toggle whiteboard
+  if ((event.key === "w" || event.key === "W") && !elements.quizArea.classList.contains("hidden")) {
+    event.preventDefault();
+    toggleWhiteboard();
     return;
   }
 
@@ -211,6 +234,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setActiveTab("practicePanel");
   autoLoadDefaultUrl();
   loadRadicalsData();
+  initWhiteboard();
 });
 
 registerServiceWorker();

@@ -38,5 +38,11 @@ export const elements = {
   quizResultsModal: document.getElementById("quizResultsModal"),
   resultsScore: document.getElementById("resultsScore"),
   resultsStreak: document.getElementById("resultsStreak"),
-  closeResultsBtn: document.getElementById("closeResultsBtn")
+  closeResultsBtn: document.getElementById("closeResultsBtn"),
+  whiteboardToggleBtn: document.getElementById("whiteboardToggleBtn"),
+  whiteboardPanel: document.getElementById("whiteboardPanel"),
+  whiteboardCanvas: document.getElementById("whiteboardCanvas"),
+  wbUndoBtn: document.getElementById("wbUndoBtn"),
+  wbClearBtn: document.getElementById("wbClearBtn"),
+  wbSizeButtons: Array.from(document.querySelectorAll("[data-wb-size]"))
 };
