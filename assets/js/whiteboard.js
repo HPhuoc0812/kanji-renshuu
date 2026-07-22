@@ -1,42 +1,49 @@
 /**
- * Whiteboard module – Canvas-based drawing pad for Kanji practice.
- * Supports: freehand drawing with Bézier smoothing, undo, clear, stroke width.
- * Zero external dependencies. Uses Canvas 2D API.
+ * Whiteboard module – High-performance Canvas drawing pad for Kanji practice.
+ * Supports: PointerEvents, requestAnimationFrame render loop, Bézier smoothing.
  */
 
 const MAX_UNDO_STEPS = 30;
-const SMOOTHING_FACTOR = 0.35;
+const SMOOTHING_FACTOR = 0.45;
 
 let canvas = null;
 let ctx = null;
 let isDrawing = false;
 let strokeWidth = 2;
 let undoStack = [];
+let canvasRect = null; // Cached rect
+
+// Render loop state
+let pendingPoints = [];
+let renderLoopId = null;
+let needsRender = false;
 
 // Stroke state
-let rawPoints = [];
+let lastRawX = 0;
+let lastRawY = 0;
 let smoothX = 0;
 let smoothY = 0;
 let lastMidX = 0;
 let lastMidY = 0;
+let strokePointCount = 0;
 
 function getStrokeColor() {
   return document.body.classList.contains("dark-mode") ? "#effaf7" : "#17211f";
 }
 
-function getPointerPos(event) {
-  const rect = canvas.getBoundingClientRect();
-
-  if (event.touches && event.touches.length > 0) {
-    return {
-      x: event.touches[0].clientX - rect.left,
-      y: event.touches[0].clientY - rect.top
-    };
+function updateCanvasRect() {
+  if (canvas) {
+    canvasRect = canvas.getBoundingClientRect();
   }
+}
 
+function getPointerPos(clientX, clientY) {
+  // Use cached rect for performance. 
+  // We assume updateCanvasRect is called on resize/scroll/pointerdown.
+  if (!canvasRect) updateCanvasRect();
   return {
-    x: event.clientX - rect.left,
-    y: event.clientY - rect.top
+    x: clientX - canvasRect.left,
+    y: clientY - canvasRect.top
   };
 }
 
@@ -48,15 +55,11 @@ function saveSnapshot() {
   if (undoStack.length >= MAX_UNDO_STEPS) {
     undoStack.shift();
   }
-
   undoStack.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
 }
 
 function clearCanvas() {
-  if (!ctx || !canvas) {
-    return;
-  }
-
+  if (!ctx || !canvas) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
@@ -67,104 +70,155 @@ function setupStroke() {
   ctx.lineJoin = "round";
 }
 
-function beginStroke(event) {
-  event.preventDefault();
-  isDrawing = true;
+// ----------------------------------------------------
+// Rendering Loop (rAF)
+// ----------------------------------------------------
 
-  const pos = getPointerPos(event);
-  smoothX = pos.x;
-  smoothY = pos.y;
-  lastMidX = pos.x;
-  lastMidY = pos.y;
-  rawPoints = [{ x: pos.x, y: pos.y }];
-
-  setupStroke();
-
-  // Draw a dot for single click/tap
-  ctx.beginPath();
-  ctx.arc(pos.x, pos.y, strokeWidth / 2, 0, Math.PI * 2);
-  ctx.fillStyle = getStrokeColor();
-  ctx.fill();
+function startRenderLoop() {
+  if (renderLoopId === null) {
+    renderLoopId = requestAnimationFrame(renderLoop);
+  }
 }
 
-function continueStroke(event) {
-  if (!isDrawing) {
+function stopRenderLoop() {
+  if (renderLoopId !== null) {
+    cancelAnimationFrame(renderLoopId);
+    renderLoopId = null;
+  }
+}
+
+function renderLoop() {
+  renderLoopId = requestAnimationFrame(renderLoop);
+
+  if (!needsRender || pendingPoints.length === 0) {
     return;
   }
-
-  event.preventDefault();
-  const raw = getPointerPos(event);
-
-  // Apply exponential smoothing to reduce jitter
-  smoothX = smooth(raw.x, smoothX);
-  smoothY = smooth(raw.y, smoothY);
-
-  const point = { x: smoothX, y: smoothY };
-  rawPoints.push(point);
-
-  if (rawPoints.length < 2) {
-    return;
-  }
-
-  const prev = rawPoints[rawPoints.length - 2];
-
-  // Calculate midpoint between previous and current smoothed point
-  const midX = (prev.x + point.x) / 2;
-  const midY = (prev.y + point.y) / 2;
 
   setupStroke();
-
-  // Draw quadratic Bézier from last midpoint, through previous point, to current midpoint
-  // This creates smooth curves that flow naturally through the drawn path
   ctx.beginPath();
-  ctx.moveTo(lastMidX, lastMidY);
-  ctx.quadraticCurveTo(prev.x, prev.y, midX, midY);
+  
+  // We process all points accumulated since the last frame
+  for (let i = 0; i < pendingPoints.length; i++) {
+    const raw = pendingPoints[i];
+    
+    // First point of a stroke
+    if (strokePointCount === 0) {
+      smoothX = raw.x;
+      smoothY = raw.y;
+      lastMidX = raw.x;
+      lastMidY = raw.y;
+      
+      // Draw initial dot
+      ctx.arc(raw.x, raw.y, strokeWidth / 2, 0, Math.PI * 2);
+      ctx.fillStyle = getStrokeColor();
+      ctx.fill();
+      ctx.beginPath(); // Start new path for following lines
+    } else {
+      // Apply exponential smoothing
+      smoothX = smooth(raw.x, smoothX);
+      smoothY = smooth(raw.y, smoothY);
+
+      // Calculate midpoint for Bézier curve
+      const midX = (lastRawX + smoothX) / 2;
+      const midY = (lastRawY + smoothY) / 2;
+
+      ctx.moveTo(lastMidX, lastMidY);
+      ctx.quadraticCurveTo(lastRawX, lastRawY, midX, midY);
+      
+      lastMidX = midX;
+      lastMidY = midY;
+    }
+    
+    lastRawX = smoothX;
+    lastRawY = smoothY;
+    strokePointCount++;
+  }
+  
   ctx.stroke();
-
-  lastMidX = midX;
-  lastMidY = midY;
+  pendingPoints = []; // Clear processed points
+  needsRender = false;
 }
 
-function endStroke(event) {
-  if (!isDrawing) {
-    return;
-  }
+// ----------------------------------------------------
+// Input Handling (Pointer Events)
+// ----------------------------------------------------
 
+function handlePointerDown(event) {
+  // Only accept primary button (left click) or touch/pen
+  if (event.pointerType === 'mouse' && event.button !== 0) return;
+  
   event.preventDefault();
-
-  // Draw final segment to the last point
-  if (rawPoints.length >= 2) {
-    const lastPoint = rawPoints[rawPoints.length - 1];
-
-    setupStroke();
-    ctx.beginPath();
-    ctx.moveTo(lastMidX, lastMidY);
-    ctx.lineTo(lastPoint.x, lastPoint.y);
-    ctx.stroke();
-  }
-
-  isDrawing = false;
-
-  if (rawPoints.length > 0) {
-    saveSnapshot();
-  }
-
-  rawPoints = [];
+  canvas.setPointerCapture(event.pointerId);
+  updateCanvasRect(); // Crucial: refresh bounds on interaction start
+  
+  isDrawing = true;
+  strokePointCount = 0;
+  pendingPoints = [];
+  needsRender = true;
+  startRenderLoop();
+  
+  pendingPoints.push(getPointerPos(event.clientX, event.clientY));
 }
+
+function processPointerEvent(event) {
+  // Modern browsers support coalesced events (higher polling rate than frame rate)
+  if (event.getCoalescedEvents) {
+    const coalesced = event.getCoalescedEvents();
+    if (coalesced.length > 0) {
+      for (const e of coalesced) {
+        pendingPoints.push(getPointerPos(e.clientX, e.clientY));
+      }
+      needsRender = true;
+      return;
+    }
+  }
+  
+  // Fallback if no coalesced events
+  pendingPoints.push(getPointerPos(event.clientX, event.clientY));
+  needsRender = true;
+}
+
+function handlePointerMove(event) {
+  if (!isDrawing) return;
+  event.preventDefault();
+  processPointerEvent(event);
+}
+
+function handlePointerUpOrCancel(event) {
+  if (!isDrawing) return;
+  event.preventDefault();
+  isDrawing = false;
+  
+  // Process any remaining position data
+  processPointerEvent(event);
+  
+  // Draw final segment to the exact end point (no smoothing for the very tip)
+  const pos = getPointerPos(event.clientX, event.clientY);
+  pendingPoints.push(pos);
+  needsRender = true;
+  
+  // Force a final render synchronously so the snapshot captures it
+  stopRenderLoop();
+  renderLoop();
+  
+  canvas.releasePointerCapture(event.pointerId);
+  saveSnapshot();
+}
+
+// ----------------------------------------------------
+// Public API
+// ----------------------------------------------------
 
 export function undo() {
   if (undoStack.length === 0) {
     clearCanvas();
     return;
   }
-
   undoStack.pop();
-
   if (undoStack.length === 0) {
     clearCanvas();
     return;
   }
-
   const snapshot = undoStack[undoStack.length - 1];
   ctx.putImageData(snapshot, 0, 0);
 }
@@ -179,9 +233,7 @@ function setStrokeWidth(size) {
 }
 
 function resizeCanvas() {
-  if (!canvas || !canvas.parentElement) {
-    return;
-  }
+  if (!canvas || !canvas.parentElement) return;
 
   const wrap = canvas.parentElement;
   const rect = wrap.getBoundingClientRect();
@@ -194,6 +246,8 @@ function resizeCanvas() {
   canvas.style.width = `${width}px`;
   canvas.style.height = `${height}px`;
   ctx.scale(dpr, dpr);
+  
+  updateCanvasRect();
 
   // Redraw from last snapshot if available
   if (undoStack.length > 0) {
@@ -215,9 +269,7 @@ export function toggleWhiteboard() {
   const panel = document.getElementById("whiteboardPanel");
   const btn = document.getElementById("whiteboardToggleBtn");
 
-  if (!panel) {
-    return;
-  }
+  if (!panel) return;
 
   const isHidden = panel.classList.contains("hidden");
   panel.classList.toggle("hidden", !isHidden);
@@ -236,16 +288,12 @@ export function toggleWhiteboard() {
 
 export function initWhiteboard() {
   canvas = document.getElementById("whiteboardCanvas");
-
-  if (!canvas) {
-    return;
-  }
+  if (!canvas) return;
 
   ctx = canvas.getContext("2d");
 
   // Tool buttons – stroke width
   const sizeButtons = document.querySelectorAll("[data-wb-size]");
-
   sizeButtons.forEach((button) => {
     button.addEventListener("click", () => {
       sizeButtons.forEach((b) => b.classList.remove("active"));
@@ -257,52 +305,40 @@ export function initWhiteboard() {
   // Undo & Clear
   const undoBtn = document.getElementById("wbUndoBtn");
   const clearBtn = document.getElementById("wbClearBtn");
-
-  if (undoBtn) {
-    undoBtn.addEventListener("click", undo);
-  }
-
-  if (clearBtn) {
-    clearBtn.addEventListener("click", clear);
-  }
+  if (undoBtn) undoBtn.addEventListener("click", undo);
+  if (clearBtn) clearBtn.addEventListener("click", clear);
 
   // Toggle button
   const toggleBtn = document.getElementById("whiteboardToggleBtn");
+  if (toggleBtn) toggleBtn.addEventListener("click", toggleWhiteboard);
 
-  if (toggleBtn) {
-    toggleBtn.addEventListener("click", toggleWhiteboard);
-  }
+  // Pointer Events (replaces mouse and touch events)
+  canvas.addEventListener("pointerdown", handlePointerDown, { passive: false });
+  canvas.addEventListener("pointermove", handlePointerMove, { passive: false });
+  canvas.addEventListener("pointerup", handlePointerUpOrCancel, { passive: false });
+  canvas.addEventListener("pointercancel", handlePointerUpOrCancel, { passive: false });
+  canvas.addEventListener("pointerout", handlePointerUpOrCancel, { passive: false });
 
-  // Mouse events
-  canvas.addEventListener("mousedown", beginStroke);
-  canvas.addEventListener("mousemove", continueStroke);
-  canvas.addEventListener("mouseup", endStroke);
-  canvas.addEventListener("mouseleave", endStroke);
-
-  // Touch events
-  canvas.addEventListener("touchstart", beginStroke, { passive: false });
-  canvas.addEventListener("touchmove", continueStroke, { passive: false });
-  canvas.addEventListener("touchend", endStroke, { passive: false });
-  canvas.addEventListener("touchcancel", endStroke, { passive: false });
+  // Prevent scroll when touching the canvas on mobile
+  canvas.style.touchAction = "none";
 
   // Resize observer
   const wrap = canvas.parentElement;
-
   if (wrap && typeof ResizeObserver !== "undefined") {
     const ro = new ResizeObserver(() => {
       const panel = document.getElementById("whiteboardPanel");
-
       if (panel && !panel.classList.contains("hidden")) {
         resizeCanvas();
       }
     });
-
     ro.observe(wrap);
   }
 
+  // Update rect on scroll
+  window.addEventListener('scroll', updateCanvasRect, { passive: true });
+
   // Initial resize if visible
   const panel = document.getElementById("whiteboardPanel");
-
   if (panel && !panel.classList.contains("hidden")) {
     resizeCanvas();
   }
