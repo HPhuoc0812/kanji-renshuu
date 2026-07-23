@@ -6,6 +6,7 @@ export const elements = {
   modeSegmentButtons: Array.from(document.querySelectorAll("[data-mode-value]")),
   hardModeToggle: document.getElementById("hardModeToggle"),
   nightmareModeToggle: document.getElementById("nightmareModeToggle"),
+  timeLimitContainer: document.getElementById("timeLimitContainer"),
   timeLimitInput: document.getElementById("timeLimitInput"),
   questionCountInput: document.getElementById("questionCount"),
   maxQuestionBtn: document.getElementById("maxQuestionBtn"),
@@ -45,5 +46,13 @@ export const elements = {
   whiteboardCanvas: document.getElementById("whiteboardCanvas"),
   wbUndoBtn: document.getElementById("wbUndoBtn"),
   wbClearBtn: document.getElementById("wbClearBtn"),
-  wbSizeButtons: Array.from(document.querySelectorAll("[data-wb-size]"))
+  wbSizeButtons: Array.from(document.querySelectorAll("[data-wb-size]")),
+
+  // Dictionary
+  dictTabBtn: document.getElementById("dictTabBtn"),
+  kanjiDictModal: document.getElementById("kanjiDictModal"),
+  dictContent: document.getElementById("dictContent"),
+  dictSearchInput: document.getElementById("dictSearchInput"),
+  dictClearSearchBtn: document.getElementById("dictClearSearchBtn"),
+  dictCloseBtn: document.getElementById("dictCloseBtn")
 };

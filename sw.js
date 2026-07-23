@@ -1,4 +1,4 @@
-const CACHE_NAME = "kanji-renshuu-v33";
+const CACHE_NAME = "kanji-renshuu-v54";
 
 const APP_SHELL = [
   "",

@@ -63,3 +63,35 @@ export function setModeSelectValue(value) {
 export function isTypingTarget(target) {
   return ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName);
 }
+
+export function init3DBanner() {
+  const wrapper = document.getElementById("heroWrapper");
+  const banner = document.getElementById("heroBanner");
+  const glare = document.getElementById("heroGlare");
+
+  if (!wrapper || !banner || !glare) return;
+
+  wrapper.addEventListener("mousemove", (e) => {
+    const rect = wrapper.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Calculate rotation (-10 to 10 degrees)
+    const xPct = x / rect.width - 0.5;
+    const yPct = y / rect.height - 0.5;
+    
+    const rotateY = xPct * 12; // max 6 deg
+    const rotateX = -yPct * 12; // max 6 deg
+    
+    banner.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+    
+    // Glare effect
+    glare.style.background = `radial-gradient(circle at ${x}px ${y}px, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 60%)`;
+    glare.style.opacity = 1;
+  });
+
+  wrapper.addEventListener("mouseleave", () => {
+    banner.style.transform = `rotateX(0deg) rotateY(0deg)`;
+    glare.style.opacity = 0;
+  });
+}

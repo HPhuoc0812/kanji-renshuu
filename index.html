@@ -7,25 +7,40 @@
   <meta name="description" content="Luyện tập Kanji bằng file Excel, CSV hoặc Google Sheets." />
   <title>漢字練習</title>
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png" />
-  <link rel="shortcut icon" type="image/png" href="assets/icons/icon-192.png" />
-  <link rel="apple-touch-icon" href="assets/icons/icon-192.png" />
-  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png?v=7" />
+  <link rel="shortcut icon" type="image/png" href="assets/icons/icon-192.png?v=7" />
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png?v=7" />
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Klee+One:wght@400;600&family=Noto+Sans+JP:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="assets/css/styles.css?v=10" />
 </head>
 <body>
   <main class="container">
-    <header class="hero">
-      <div>
-        <p class="eyebrow">Kanji Renshuu</p>
-        <h1>漢字練習</h1>
-        <p>Luyện Kanji bằng Excel, CSV hoặc Google Sheets. Chọn phạm vi bài, vào quiz, và ôn đúng phần mình cần nhớ.</p>
-      </div>
-      <div class="hero-mark" aria-hidden="true">練</div>
-    </header>
+    <div class="hero-wrapper" id="heroWrapper">
+      <header class="hero" id="heroBanner">
+        <div class="hero-glare" id="heroGlare"></div>
+        <div class="hero-particles" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <div class="hero-content">
+          <div class="hero-eyebrow">
+            <p class="eyebrow">Kanji Renshuu</p>
+            <span class="hero-badge">Phiên bản 2.0</span>
+          </div>
+          <h1>漢字練習</h1>
+          <p>Luyện Kanji bằng Excel, CSV hoặc Google Sheets. Chọn phạm vi bài, vào quiz, và ôn đúng phần mình cần nhớ.</p>
+        </div>
+        <div class="hero-mark" aria-hidden="true">練</div>
+      </header>
+    </div>
 
     <nav class="app-tabs" role="tablist" aria-label="Chọn khu vực học">
       <button id="practiceTabBtn" class="tab-button active" type="button" role="tab" aria-selected="true" aria-controls="practicePanel" data-tab-target="practicePanel">Luyện tập</button>
       <button id="radicalsTabBtn" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="radicalsPanel" data-tab-target="radicalsPanel">Tra cứu bộ thủ</button>
+      <button id="dictTabBtn" class="tab-button" type="button" role="tab" aria-selected="false" title="Tra cứu Kanji">Từ điển</button>
     </nav>
 
     <div id="practicePanel" class="tab-panel" role="tabpanel" aria-labelledby="practiceTabBtn" aria-hidden="false">
@@ -40,77 +55,96 @@
         </button>
       </div>
 
-      <div class="grid grid-2">
-        <div>
-          <label for="fileInput">File dữ liệu Kanji</label>
-          <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" />
-        </div>
-        <div>
-          <label for="modeSelect">Chế độ luyện tập</label>
-          <select id="modeSelect" class="native-select" tabindex="-1" aria-hidden="true">
-            <option value="reading-to-kanji">Nhìn Âm Hán -> Chọn Kanji</option>
-            <option value="kanji-to-reading">Nhìn Kanji -> Chọn Âm Hán</option>
-          </select>
-          <div class="mode-segmented" role="group" aria-label="Chế độ luyện tập">
-            <button class="mode-segment active" type="button" data-mode-value="reading-to-kanji" aria-pressed="true">Âm Hán -> Kanji</button>
-            <button class="mode-segment" type="button" data-mode-value="kanji-to-reading" aria-pressed="false">Kanji -> Âm Hán</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="grid grid-3 form-row">
-        <div>
-          <label for="questionCount">Số câu</label>
-          <div class="input-action">
-            <input id="questionCount" type="number" value="10" min="1" max="300" />
-            <button id="maxQuestionBtn" class="mini" type="button">Max</button>
-          </div>
-        </div>
-        <div>
-          <label for="lessonFrom">Từ bài</label>
-          <input id="lessonFrom" type="number" min="1" placeholder="Không bắt buộc" />
-        </div>
-        <div>
-          <label for="lessonTo">Đến bài</label>
-          <input id="lessonTo" type="number" min="1" placeholder="Không bắt buộc" />
-        </div>
-      </div>
-
-      <div class="grid grid-2 form-row">
-        <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div class="setting-group">
+        <h3 class="group-title">1. Nguồn dữ liệu</h3>
+        <div class="grid grid-2">
           <div>
-            <label for="hardModeToggle">Chế độ khó</label>
-            <label class="checkbox-label">
-              <input id="hardModeToggle" type="checkbox" />
-              Giới hạn thời gian
+            <label for="fileInput">Tải lên từ máy tính</label>
+            <div class="file-dropzone">
+              <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" />
+              <div class="dropzone-content">
+                <div class="dropzone-icon">📁</div>
+                <span class="dropzone-text">Kéo thả hoặc bấm để tải file</span>
+                <span class="dropzone-subtext">Hỗ trợ .xlsx, .csv</span>
+              </div>
+            </div>
+          </div>
+          <div class="url-import-section">
+            <label for="urlInput">Import từ Web (Google Sheets/CSV)</label>
+            <input id="urlInput" type="text" value="https://docs.google.com/spreadsheets/d/1Lsvnce88zkeASGQPzPJXcjfg2yBjx1b2yMlloLmDy7I/edit?gid=0#gid=0" />
+            <button id="importBtn" class="secondary" type="button" style="margin-top: 12px; width: 100%;">Tải dữ liệu từ URL</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <h3 class="group-title">2. Chế độ & Phạm vi</h3>
+        <div class="grid grid-2" style="margin-bottom: 16px;">
+          <div>
+            <label for="modeSelect">Hình thức hỏi</label>
+            <select id="modeSelect" class="native-select" tabindex="-1" aria-hidden="true">
+              <option value="reading-to-kanji">Nhìn Âm Hán → Chọn Kanji</option>
+              <option value="kanji-to-reading">Nhìn Kanji → Chọn Âm Hán</option>
+            </select>
+            <div class="mode-segmented" role="group" aria-label="Chế độ luyện tập">
+              <button class="mode-segment active" type="button" data-mode-value="reading-to-kanji" aria-pressed="true">Âm Hán → Kanji</button>
+              <button class="mode-segment" type="button" data-mode-value="kanji-to-reading" aria-pressed="false">Kanji → Âm Hán</button>
+            </div>
+          </div>
+          <div>
+            <label for="questionCount">Số lượng câu hỏi</label>
+            <div class="input-with-addon">
+              <input id="questionCount" type="number" value="10" min="1" max="300" />
+              <button id="maxQuestionBtn" class="addon-btn" type="button">MAX</button>
+            </div>
+          </div>
+        </div>
+        <div class="grid grid-2">
+          <div>
+            <label for="lessonFrom">Học từ bài</label>
+            <input id="lessonFrom" type="number" min="1" placeholder="Không bắt buộc" />
+          </div>
+          <div>
+            <label for="lessonTo">Đến bài</label>
+            <input id="lessonTo" type="number" min="1" placeholder="Không bắt buộc" />
+          </div>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <h3 class="group-title">3. Thử thách</h3>
+        <div class="toggle-list">
+          <div class="modern-toggle toggle-with-addon">
+            <label class="toggle-main" for="hardModeToggle">
+              <div class="toggle-text">
+                <span class="toggle-title">Giới hạn thời gian</span>
+              </div>
+              <div class="toggle-switch">
+                <input id="hardModeToggle" type="checkbox" />
+                <span class="toggle-slider"></span>
+              </div>
             </label>
+            <div id="timeLimitContainer" class="toggle-addon hidden">
+              <input id="timeLimitInput" type="number" min="3" max="60" value="12" />
+              <span>giây</span>
+            </div>
           </div>
-          <div>
-            <label for="nightmareModeToggle" style="color: var(--rose);">Chế độ Ác mộng</label>
-            <label class="checkbox-label" title="Sinh ra các đáp án sai là các chữ Kanji có hình dáng cực kỳ giống với đáp án đúng để đánh lừa">
+          
+          <label class="modern-toggle tooltip-wrapper" for="nightmareModeToggle">
+            <div class="toggle-text">
+              <span class="toggle-title" style="color: var(--rose);">Chế độ Ác mộng</span>
+            </div>
+            <div class="toggle-switch">
               <input id="nightmareModeToggle" type="checkbox" />
-              Kanji dễ nhầm lẫn
-            </label>
-          </div>
-        </div>
-        <div>
-          <label for="timeLimitInput">Thời gian mỗi câu</label>
-          <input id="timeLimitInput" type="number" min="3" max="60" value="12" />
-        </div>
-      </div>
-
-      <div class="grid url-grid form-row">
-        <div>
-          <label for="urlInput">URL file Excel / CSV / Google Sheets</label>
-          <input id="urlInput" type="text" value="https://docs.google.com/spreadsheets/d/1Lsvnce88zkeASGQPzPJXcjfg2yBjx1b2yMlloLmDy7I/edit?gid=0#gid=0" />
-        </div>
-        <div class="align-bottom">
-          <button id="importBtn" class="secondary" type="button">Import từ URL</button>
+              <span class="toggle-slider slider-red"></span>
+            </div>
+            <div class="custom-tooltip">Sinh ra đáp án sai cực giống đáp án đúng</div>
+          </label>
         </div>
       </div>
 
       <div class="actions">
-        <button id="startBtn" type="button">Bắt đầu luyện tập</button>
+        <button id="startBtn" type="button" class="massive-btn">Bắt đầu luyện tập</button>
       </div>
 
       <div id="fileInfo" class="status">Đang tải dữ liệu từ Google Sheets...</div>
@@ -122,10 +156,9 @@
         <div class="quiz-main">
           <div class="quiz-topline">
             <div class="status" id="quizStatus"></div>
-            <div id="streakDisplay" class="streak-display hidden">
-              🔥 Streak: <span id="currentStreakValue">0</span>
+            <div class="score-center-wrap">
+              <div class="footer streak-display" id="scoreInfo">Điểm hiện tại: 0</div>
             </div>
-            <div class="footer" id="scoreInfo"></div>
             <button id="whiteboardToggleBtn" class="wb-toggle-btn" type="button" title="Bật/tắt bảng viết (W)">✏️</button>
           </div>
 
@@ -228,6 +261,51 @@
       <button id="closeResultsBtn" type="button" class="primary">OK</button>
     </div>
   </dialog>
+
+  <dialog id="kanjiDictModal" class="dict-modal hidden">
+    <div class="dict-modal-inner">
+      <div class="dict-header-row">
+        <h3>Tra Cứu Kanji</h3>
+        <button id="dictCloseBtn" class="dict-close-btn" type="button" title="Đóng" aria-label="Đóng">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="dict-search-section">
+        <div class="dict-search-wrap">
+          <span class="dict-search-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+          </span>
+          <input id="dictSearchInput" type="text" class="dict-search-input" placeholder="Tìm theo Kanji, Hán Việt hoặc Nghĩa..." autocomplete="off" />
+          <button id="dictClearSearchBtn" class="dict-clear-btn hidden" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div id="dictAutocomplete" class="dict-autocomplete hidden"></div>
+      </div>
+      <div id="dictContent" class="dict-body">
+        <div class="dict-empty">
+          <div id="dictRadicalsSuggest" class="dict-radicals-suggest"></div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="fab-container">
+    <div class="fab-menu">
+      <a href="https://www.vnjpclub.com/minna-no-nihongo/" target="_blank" rel="noopener" class="fab-item" data-tooltip="Minna no Nihongo">
+        <img src="https://www.google.com/s2/favicons?domain=vnjpclub.com&sz=128" alt="VNJPClub" />
+      </a>
+      <a href="https://mazii.net/vi-VN/search" target="_blank" rel="noopener" class="fab-item" data-tooltip="Từ điển Mazii">
+        <img src="https://www.google.com/s2/favicons?domain=mazii.net&sz=128" alt="Mazii" />
+      </a>
+      <a href="https://phadaotiengnhat.com/" target="_blank" rel="noopener" class="fab-item" data-tooltip="Phá đảo tiếng Nhật">
+        <img src="https://www.google.com/s2/favicons?domain=phadaotiengnhat.com&sz=128" alt="Phá đảo" />
+      </a>
+    </div>
+    <button class="fab-btn" aria-label="Tài nguyên học tập">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+  </div>
 
   <script src="libs/xlsx.full.min.js"></script>
   <script type="module" src="assets/js/app.js"></script>

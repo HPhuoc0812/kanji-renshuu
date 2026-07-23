@@ -65,16 +65,31 @@ function resetTimerDisplay() {
   elements.timerText.textContent = `0s`;
 }
 
-function updateStreakDisplay() {
-  if (!elements.streakDisplay) {
+function updateScoreDisplay() {
+  if (!elements.scoreInfo) {
     return;
   }
 
-  if (quizHardModeEnabled && currentIndex < quizItems.length) {
-    elements.streakDisplay.classList.remove("hidden");
-    elements.currentStreakValue.textContent = currentStreak;
-  } else {
-    elements.streakDisplay.classList.add("hidden");
+  let text = `Điểm hiện tại: ${score}`;
+  let classesToAdd = [];
+  
+  if (currentIndex >= quizItems.length) {
+    text = `Điểm của bạn: ${score} / ${quizItems.length}`;
+  } else if (currentStreak >= 5) {
+    text = `<span class="fire-icon">🔥</span> Điểm hiện tại: ${score}`;
+    if (currentStreak >= 15) {
+      classesToAdd.push("streak-blazing");
+    } else if (currentStreak >= 10) {
+      classesToAdd.push("streak-hot");
+    } else {
+      classesToAdd.push("streak-warm");
+    }
+  }
+
+  elements.scoreInfo.innerHTML = text;
+  elements.scoreInfo.classList.remove("streak-warm", "streak-hot", "streak-blazing");
+  if (classesToAdd.length > 0) {
+    elements.scoreInfo.classList.add(...classesToAdd);
   }
 }
 
@@ -125,9 +140,7 @@ function handleTimeExpired() {
     return;
   }
 
-  if (quizHardModeEnabled) {
-    currentStreak = 0;
-  }
+  currentStreak = 0;
 
   selectedChoice = null;
   if (selectedButton) {
@@ -146,10 +159,9 @@ function handleTimeExpired() {
     }
   });
 
-  elements.scoreInfo.textContent = `Điểm hiện tại: ${score} / ${currentIndex}`;
+  updateScoreDisplay();
   elements.confirmBtn.classList.add("hidden");
   elements.nextBtn.classList.remove("hidden");
-  updateStreakDisplay();
   showError("Hết giờ! Đáp án đúng đã hiển thị.");
 }
 
@@ -270,7 +282,7 @@ export function renderQuestion() {
     elements.questionPrompt.textContent = "Hoàn thành bài luyện tập!";
     elements.optionsContainer.innerHTML = "";
     elements.quizStatus.textContent = `Bạn đã hoàn thành ${quizItems.length} câu.`;
-    elements.scoreInfo.textContent = `Điểm của bạn: ${score} / ${quizItems.length}`;
+    updateScoreDisplay();
     elements.confirmBtn.classList.add("hidden");
     elements.nextBtn.classList.add("hidden");
 
@@ -295,9 +307,9 @@ export function renderQuestion() {
   selectedButton = null;
 
   if (mode === "reading-to-kanji") {
-    elements.questionPrompt.textContent = `Câu ${currentIndex + 1}/${quizItems.length}: Chọn Kanji tương ứng với "${item.reading}"`;
+    elements.questionPrompt.textContent = `Chọn Kanji tương ứng với "${item.reading}"`;
   } else {
-    elements.questionPrompt.textContent = `Câu ${currentIndex + 1}/${quizItems.length}: Chọn Âm Hán tương ứng với "${item.kanji}"`;
+    elements.questionPrompt.textContent = `Chọn Âm Hán tương ứng với "${item.kanji}"`;
   }
 
   choices.forEach((choice) => {
@@ -309,12 +321,11 @@ export function renderQuestion() {
   });
 
   elements.quizStatus.textContent = `Câu ${currentIndex + 1} / ${quizItems.length}`;
-  elements.scoreInfo.textContent = `Điểm hiện tại: ${score} / ${currentIndex}`;
+  updateScoreDisplay();
   elements.confirmBtn.classList.remove("hidden");
   elements.confirmBtn.disabled = false;
   elements.nextBtn.classList.add("hidden");
 
-  updateStreakDisplay();
   refreshQuestionTimer();
 }
 
@@ -371,16 +382,12 @@ export function confirmAnswer() {
 
   if (isCorrect) {
     score += 1;
-    if (quizHardModeEnabled) {
-      currentStreak += 1;
-      if (currentStreak > maxStreak) {
-        maxStreak = currentStreak;
-      }
+    currentStreak += 1;
+    if (currentStreak > maxStreak) {
+      maxStreak = currentStreak;
     }
   } else {
-    if (quizHardModeEnabled) {
-      currentStreak = 0;
-    }
+    currentStreak = 0;
   }
 
   Array.from(elements.optionsContainer.children).forEach((option) => {
@@ -394,10 +401,9 @@ export function confirmAnswer() {
     }
   });
 
-  elements.scoreInfo.textContent = `Điểm hiện tại: ${score} / ${currentIndex + 1}`;
+  updateScoreDisplay();
   elements.confirmBtn.classList.add("hidden");
   elements.nextBtn.classList.remove("hidden");
-  updateStreakDisplay();
 }
 
 export function nextQuestion() {

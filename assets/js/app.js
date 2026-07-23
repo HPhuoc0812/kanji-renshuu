@@ -31,13 +31,21 @@ import {
   setActiveTab,
   setModeSelectValue,
   showError,
-  toggleTheme
+  toggleTheme,
+  init3DBanner
 } from "./ui.js";
 import {
   initWhiteboard,
   toggleWhiteboard,
   undo as whiteboardUndo
 } from "./whiteboard.js";
+import {
+  openDictionary,
+  closeDictionary,
+  handleDictSearchInput,
+  handleDictSearchSubmit,
+  clearDictSearch
+} from "./dictionary.js";
 
 function handleKeyboardShortcut(event) {
   // Ctrl+Z for whiteboard undo (works globally when whiteboard is visible)
@@ -162,7 +170,13 @@ function bindEvents() {
     button.addEventListener("click", () => setModeSelectValue(button.dataset.modeValue));
   });
 
-  elements.hardModeToggle.addEventListener("change", () => {
+  elements.hardModeToggle.addEventListener("change", (e) => {
+    if (e.target.checked) {
+      elements.timeLimitContainer.classList.remove("hidden");
+    } else {
+      elements.timeLimitContainer.classList.add("hidden");
+    }
+    
     if (elements.quizArea.classList.contains("hidden")) {
       refreshQuestionTimer();
     }
@@ -206,6 +220,45 @@ function bindEvents() {
   });
 
   window.addEventListener("online", autoLoadDefaultUrl);
+
+  // Dictionary events
+  elements.dictTabBtn?.addEventListener("click", () => {
+    openDictionary(); // Opens empty state
+  });
+
+  elements.dictSearchInput?.addEventListener("input", handleDictSearchInput);
+
+  elements.dictSearchInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleDictSearchSubmit();
+    }
+  });
+
+  elements.dictClearSearchBtn?.addEventListener("click", clearDictSearch);
+
+  elements.dictCloseBtn?.addEventListener("click", closeDictionary);
+
+  // Close dictionary when clicking outside the modal content
+  elements.kanjiDictModal?.addEventListener("click", (e) => {
+    if (e.target === elements.kanjiDictModal) {
+      closeDictionary();
+    }
+  });
+
+  // Allow clicking Kanji in quiz option buttons to open dictionary
+  elements.optionsContainer?.addEventListener("dblclick", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    const text = btn.textContent.trim();
+    // Check if the text contains a Kanji character (CJK Unified Ideographs range)
+    const kanjiMatch = text.match(/[\u4e00-\u9faf\u3400-\u4dbf]/)
+    if (kanjiMatch) {
+      e.preventDefault();
+      e.stopPropagation();
+      openDictionary(kanjiMatch[0]);
+    }
+  });
 }
 
 function registerServiceWorker() {
@@ -225,6 +278,10 @@ document.addEventListener("DOMContentLoaded", () => {
   loadThemePreference();
   setModeSelectValue(elements.modeSelect.value);
   
+  if (elements.hardModeToggle.checked) {
+    elements.timeLimitContainer.classList.remove("hidden");
+  }
+  
   // Restore URL from storage if available
   const savedUrl = loadUrlFromStorage();
   if (savedUrl && !elements.urlInput.value.includes(savedUrl)) {
@@ -235,6 +292,7 @@ document.addEventListener("DOMContentLoaded", () => {
   autoLoadDefaultUrl();
   loadRadicalsData();
   initWhiteboard();
+  init3DBanner();
 });
 
 registerServiceWorker();
