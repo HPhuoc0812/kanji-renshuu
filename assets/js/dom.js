@@ -1,6 +1,7 @@
 export const elements = {
   fileInput: document.getElementById("fileInput"),
   urlInput: document.getElementById("urlInput"),
+  appsScriptUrlInput: document.getElementById("appsScriptUrlInput"),
   importBtn: document.getElementById("importBtn"),
   modeSelect: document.getElementById("modeSelect"),
   modeSegmentButtons: Array.from(document.querySelectorAll("[data-mode-value]")),
@@ -54,5 +55,16 @@ export const elements = {
   dictContent: document.getElementById("dictContent"),
   dictSearchInput: document.getElementById("dictSearchInput"),
   dictClearSearchBtn: document.getElementById("dictClearSearchBtn"),
-  dictCloseBtn: document.getElementById("dictCloseBtn")
+  dictCloseBtn: document.getElementById("dictCloseBtn"),
+  dictBackBtn: document.getElementById("dictBackBtn"),
+  dictAddBtn: document.getElementById("dictAddBtn"),
+  
+  kanjiAddModal: document.getElementById("kanjiAddModal"),
+  kanjiAddCloseBtn: document.getElementById("kanjiAddCloseBtn"),
+  kanjiAddDisplay: document.getElementById("kanjiAddDisplay"),
+  kanjiAddHanviet: document.getElementById("kanjiAddHanviet"),
+  kanjiAddLesson: document.getElementById("kanjiAddLesson"),
+  kanjiAddMnemonic: document.getElementById("kanjiAddMnemonic"),
+  kanjiAddSubmitBtn: document.getElementById("kanjiAddSubmitBtn"),
+  kanjiAddStatus: document.getElementById("kanjiAddStatus")
 };

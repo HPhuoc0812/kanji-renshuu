@@ -15,6 +15,9 @@ const lookupCache = new Map();
 // Cache for autocomplete search queries
 const searchCache = new Map();
 
+// History stack for dictionary modal
+let dictHistory = [];
+
 // Common radicals for the empty state suggestion grid
 const SUGGESTED_RADICALS = [
   { char: "人", name: "Nhân" }, { char: "心", name: "Tâm" },
@@ -24,6 +27,21 @@ const SUGGESTED_RADICALS = [
   { char: "日", name: "Nhật" }, { char: "月", name: "Nguyệt" },
   { char: "金", name: "Kim" }, { char: "土", name: "Thổ" }
 ];
+
+function cleanHanViet(str, query = "") {
+  if (!str) return "";
+  let cleaned = str.replace(/\(.*?\)/g, "").replace(/\[.*?\]/g, "");
+  let parts = cleaned.split(/[,/\-]/).map(s => s.trim()).filter(s => s);
+  
+  if (query) {
+    let qNoAccent = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    let matchedPart = parts.find(p => p.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(qNoAccent));
+    if (matchedPart) {
+      return matchedPart.toUpperCase();
+    }
+  }
+  return (parts[0] || "").toUpperCase();
+}
 
 /**
  * Perform a general search on Mazii API to get a list of matching Kanji.
@@ -48,18 +66,21 @@ async function searchMazii(query) {
     // Map to a lightweight format for autocomplete, filtering out results without kanji
     // and filtering out matches that only exist in the detail/meaning (not in Han Viet, Kanji, or readings).
     const queryLower = query.toLowerCase();
+    const queryNoAccent = queryLower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
     const results = json.results
       .filter(r => r.kanji)
       .filter(r => {
-        const hanVietMatch = r.mean && r.mean.toLowerCase().includes(queryLower);
+        const hanViet = (r.mean || "").toLowerCase();
+        const hanVietNoAccent = hanViet.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         const kanjiMatch = r.kanji.includes(query);
         const onKunMatch = (r.on && r.on.toLowerCase().includes(queryLower)) || 
                            (r.kun && r.kun.toLowerCase().includes(queryLower));
-        return hanVietMatch || kanjiMatch || onKunMatch;
+        return hanVietNoAccent.includes(queryNoAccent) || kanjiMatch || onKunMatch;
       })
       .map(r => ({
         kanji: r.kanji,
-        hanViet: r.mean || "",
+        hanViet: cleanHanViet(r.mean, query),
         detail: (r.detail || "").replace(/##/g, " - ").replace(/\n/g, " - ").substring(0, 60),
         jlpt: Array.isArray(r.level) ? r.level[0] : r.level
       }));
@@ -78,17 +99,21 @@ async function searchMazii(query) {
 function searchLocal(query) {
   const data = getSourceData() || [];
   const q = query.toLowerCase();
+  const qNoAccent = q.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   
   const matches = data.filter(item => {
     const kanji = (item.kanji || "").toLowerCase();
     const reading = (item.reading || "").toLowerCase();
+    const readingNoAccent = reading.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const meaning = (item.meaning || "").toLowerCase();
-    return kanji.includes(q) || reading.includes(q) || meaning.includes(q);
-  }).slice(0, 15);
+    const meaningNoAccent = meaning.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    
+    return kanji.includes(q) || readingNoAccent.includes(qNoAccent) || meaningNoAccent.includes(qNoAccent);
+  });
   
   return matches.map(m => ({
     kanji: m.kanji,
-    hanViet: m.reading || "",
+    hanViet: cleanHanViet(m.reading, query),
     detail: (m.meaning || "").substring(0, 60),
     jlpt: ""
   }));
@@ -101,7 +126,10 @@ function mergeResults(local, api) {
   const map = new Map();
   local.forEach(r => map.set(r.kanji, r));
   api.forEach(r => map.set(r.kanji, r));
-  return Array.from(map.values()).slice(0, 15);
+  
+  const results = Array.from(map.values());
+  results.sort((a, b) => (a.hanViet || "").localeCompare(b.hanViet || "", 'vi'));
+  return results.slice(0, 15);
 }
 
 /**
@@ -251,9 +279,21 @@ function renderDictionaryContent(data, container) {
   // Build examples HTML
   let examplesHtml = "";
   if (data.examples.length > 0) {
+    const sourceData = getSourceData();
     const exampleRows = data.examples.map(ex => {
+      // Build word with clickable kanji chars and Hán Việt tooltips
+      const wordHtml = (ex.w || "").split("").map(ch => {
+        const isKanji = /[\u4e00-\u9faf\u3400-\u4dbf]/.test(ch);
+        if (isKanji) {
+          const match = sourceData.find(item => item.kanji === ch);
+          const hvName = match ? match.reading.toUpperCase() : "";
+          return `<span class="dict-vocab-kanji" data-kanji="${ch}" title="${hvName}" style="cursor:pointer">${ch}</span>`;
+        }
+        return ch;
+      }).join("");
+
       return `<tr>
-        <td class="dict-ex-word">${ex.w || ""}</td>
+        <td class="dict-ex-word">${wordHtml}</td>
         <td class="dict-ex-reading">${ex.p || ""}</td>
         <td class="dict-ex-meaning">${ex.m || ""}</td>
       </tr>`;
@@ -318,7 +358,7 @@ function renderDictionaryContent(data, container) {
     ${!isMazii ? `<p class="dict-source-note">⚠ Dữ liệu từ nguồn dự phòng (kanjiapi.dev). Một số thông tin có thể bằng tiếng Anh.</p>` : ""}
   `;
 
-  // Wire up stroke play button
+    // Wire up stroke play button
   const playBtn = container.querySelector("#dictPlayStrokeBtn");
   const guideEl = container.querySelector("#dictGuideContainer");
   const displayEl = container.querySelector(".dict-kanji-display");
@@ -335,6 +375,50 @@ function renderDictionaryContent(data, container) {
         playBtn.disabled = false;
       }, 2500);
     });
+  }
+
+  // Wire up clicks on radical tags
+  container.querySelectorAll(".dict-clickable-radical").forEach(tag => {
+    tag.addEventListener("click", async () => {
+      const char = tag.dataset.kanji;
+      if (char) {
+        const data = await lookupKanji(char);
+        if (data) {
+          const searchInput = document.getElementById("dictSearchInput");
+          if (searchInput) searchInput.value = char;
+          openDictionary(char, true);
+        } else {
+          // Not found in dict, navigate to radicals tab
+          closeDictionary();
+          const radicalsTabBtn = document.querySelector('[data-tab-target="radicalsPanel"]');
+          if (radicalsTabBtn) radicalsTabBtn.click();
+          
+          const radSearch = document.getElementById("radicalsSearch");
+          if (radSearch) {
+            radSearch.value = char;
+            radSearch.dispatchEvent(new Event('input'));
+          }
+        }
+      }
+    });
+  });
+
+  // Wire up clicks on vocab kanji characters
+  container.querySelectorAll(".dict-vocab-kanji").forEach(span => {
+    span.addEventListener("click", () => {
+      const char = span.dataset.kanji;
+      if (char) {
+        openDictionary(char, true);
+      }
+    });
+  });
+}
+
+export function goBackDictionary() {
+  if (dictHistory.length > 1) {
+    dictHistory.pop(); // Remove current
+    const prevKanji = dictHistory[dictHistory.length - 1]; // Get previous
+    openDictionary(prevKanji, false);
   }
 }
 
@@ -439,12 +523,13 @@ function renderLoadingState(container, kanji) {
 /**
  * Open the dictionary modal for a given kanji or query.
  */
-export async function openDictionary(kanji = null) {
+export async function openDictionary(kanji = null, addToHistory = true) {
   const modal = document.getElementById("kanjiDictModal");
   const content = document.getElementById("dictContent");
   const searchInput = document.getElementById("dictSearchInput");
   const clearBtn = document.getElementById("dictClearSearchBtn");
   const autocomplete = document.getElementById("dictAutocomplete");
+  const backBtn = document.getElementById("dictBackBtn");
 
   if (!modal || !content) return;
 
@@ -467,7 +552,33 @@ export async function openDictionary(kanji = null) {
     const isSingleKanji = /[\u4e00-\u9faf\u3400-\u4dbf]/.test(kanji) && kanji.length === 1;
     
     if (isSingleKanji) {
+      if (addToHistory) {
+        if (dictHistory.length === 0 || dictHistory[dictHistory.length - 1] !== kanji) {
+          dictHistory.push(kanji);
+        }
+      }
+      
+      if (backBtn) {
+        if (dictHistory.length > 1) {
+          backBtn.classList.remove("hidden");
+        } else {
+          backBtn.classList.add("hidden");
+        }
+      }
+      
       const data = await lookupKanji(kanji);
+      setCurrentKanjiData(data);
+      
+      const addBtn = document.getElementById("dictAddBtn");
+      const appsScriptUrl = document.getElementById("appsScriptUrlInput")?.value.trim();
+      if (addBtn) {
+        if (appsScriptUrl) {
+          addBtn.classList.remove("hidden");
+        } else {
+          addBtn.classList.add("hidden");
+        }
+      }
+      
       renderDictionaryContent(data, content);
     } else {
       // It's a search term, run search and show first result
@@ -476,6 +587,18 @@ export async function openDictionary(kanji = null) {
         // Auto select first result
         if (searchInput) searchInput.value = results[0].kanji;
         const data = await lookupKanji(results[0].kanji);
+        setCurrentKanjiData(data);
+        
+        const addBtn = document.getElementById("dictAddBtn");
+        const appsScriptUrl = document.getElementById("appsScriptUrlInput")?.value.trim();
+        if (addBtn) {
+          if (appsScriptUrl) {
+            addBtn.classList.remove("hidden");
+          } else {
+            addBtn.classList.add("hidden");
+          }
+        }
+        
         renderDictionaryContent(data, content);
       } else {
         renderDictionaryContent(null, content);
@@ -483,6 +606,10 @@ export async function openDictionary(kanji = null) {
     }
   } else {
     // Empty state
+    dictHistory = [];
+    if (backBtn) backBtn.classList.add("hidden");
+    const addBtn = document.getElementById("dictAddBtn");
+    if (addBtn) addBtn.classList.add("hidden");
     if (searchInput) searchInput.value = "";
     if (clearBtn) clearBtn.classList.add("hidden");
     renderEmptyState(content);
@@ -496,9 +623,132 @@ export async function openDictionary(kanji = null) {
 export function closeDictionary() {
   const modal = document.getElementById("kanjiDictModal");
   if (!modal) return;
+  dictHistory = [];
+  const backBtn = document.getElementById("dictBackBtn");
+  if (backBtn) backBtn.classList.add("hidden");
   modal.close?.();
   modal.classList.add("hidden");
 }
+
+let currentKanjiData = null;
+
+export function setCurrentKanjiData(data) {
+  currentKanjiData = data;
+}
+
+export function openAddKanjiModal() {
+  const modal = document.getElementById("kanjiAddModal");
+  if (!modal || !currentKanjiData) return;
+
+  const display = document.getElementById("kanjiAddDisplay");
+  const hanviet = document.getElementById("kanjiAddHanviet");
+  const mnemonic = document.getElementById("kanjiAddMnemonic");
+  const lesson = document.getElementById("kanjiAddLesson");
+  const status = document.getElementById("kanjiAddStatus");
+
+  if (display) display.textContent = currentKanjiData.kanji;
+  if (hanviet) {
+    const raw = currentKanjiData.hanViet || "";
+    hanviet.textContent = raw.toLowerCase().replace(/(^|[\s\/]+)(.)/g, (match, sep, char) => sep + char.toUpperCase());
+  }
+  if (mnemonic) {
+    const rawMnemonic = currentKanjiData.mnemonic || "";
+    mnemonic.value = rawMnemonic.replace(/<[^>]*>?/gm, '');
+  }
+  if (lesson) lesson.value = "";
+  if (status) status.textContent = "";
+
+  modal.classList.remove("hidden");
+  if (modal.showModal && !modal.open) {
+    modal.showModal();
+  }
+}
+
+export function closeAddKanjiModal() {
+  const modal = document.getElementById("kanjiAddModal");
+  if (!modal) return;
+  modal.close?.();
+  modal.classList.add("hidden");
+}
+
+export async function submitAddKanji() {
+  const urlInput = document.getElementById("appsScriptUrlInput");
+  const url = urlInput ? urlInput.value.trim() : "";
+  if (!url) {
+    alert("Vui lòng nhập link Google Apps Script trong phần Cài Đặt trước khi thêm!");
+    return;
+  }
+
+  const lesson = document.getElementById("kanjiAddLesson")?.value.trim() || "";
+  const mnemonic = document.getElementById("kanjiAddMnemonic")?.value.trim() || "";
+  const status = document.getElementById("kanjiAddStatus");
+  const btn = document.getElementById("kanjiAddSubmitBtn");
+
+  if (!lesson) {
+    if (status) {
+      status.style.color = "var(--rose)";
+      status.textContent = "Vui lòng nhập Bài số mấy!";
+    }
+    return;
+  }
+
+  if (btn) btn.disabled = true;
+  if (btn) btn.querySelector("span").textContent = "Đang gửi...";
+  if (status) {
+    status.style.color = "var(--text-tertiary)";
+    status.textContent = "Đang kết nối...";
+  }
+
+  try {
+    const formatTitleCase = (str) => {
+      if (!str) return "";
+      return str.toLowerCase().replace(/(^|[\s\/]+)(.)/g, (match, sep, char) => sep + char.toUpperCase());
+    };
+
+    const params = new URLSearchParams();
+    params.append("lesson", lesson);
+    params.append("kanji", currentKanjiData.kanji);
+    params.append("hanviet", formatTitleCase(currentKanjiData.hanViet || ""));
+    params.append("mnemonic", mnemonic);
+
+    const targetUrl = url + (url.includes('?') ? '&' : '?') + params.toString();
+
+    const response = await fetch(targetUrl, {
+      method: "GET"
+    });
+
+    const result = await response.json();
+    
+    if (status) {
+      if (result.status === "exists") {
+        status.style.color = "var(--rose)";
+        status.textContent = "Kanji này đã tồn tại trong Sheet!";
+      } else if (result.status === "success") {
+        status.style.color = "var(--teal-dark)";
+        status.textContent = "Thêm thành công! Đã gửi lên Sheets.";
+      } else {
+        throw new Error(result.message || "Unknown error");
+      }
+    }
+    setTimeout(() => {
+      closeAddKanjiModal();
+      if (status) status.textContent = "";
+    }, 1500);
+
+  } catch (error) {
+    console.error("Lỗi khi thêm Kanji:", error);
+    if (status) {
+      status.style.color = "var(--rose)";
+      status.textContent = "Lỗi: " + (error.message || "Không xác định. Kiểm tra console.");
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.querySelector("span").textContent = "Gửi lên Sheets";
+    }
+  }
+}
+
 
 let searchTimeout = null;
 

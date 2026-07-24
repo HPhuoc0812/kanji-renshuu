@@ -44,7 +44,11 @@ import {
   closeDictionary,
   handleDictSearchInput,
   handleDictSearchSubmit,
-  clearDictSearch
+  clearDictSearch,
+  goBackDictionary,
+  openAddKanjiModal,
+  closeAddKanjiModal,
+  submitAddKanji
 } from "./dictionary.js";
 
 function handleKeyboardShortcut(event) {
@@ -238,6 +242,14 @@ function bindEvents() {
   elements.dictClearSearchBtn?.addEventListener("click", clearDictSearch);
 
   elements.dictCloseBtn?.addEventListener("click", closeDictionary);
+  elements.dictBackBtn?.addEventListener("click", goBackDictionary);
+  elements.dictAddBtn?.addEventListener("click", openAddKanjiModal);
+  
+  elements.kanjiAddCloseBtn?.addEventListener("click", closeAddKanjiModal);
+  elements.kanjiAddSubmitBtn?.addEventListener("click", submitAddKanji);
+  elements.kanjiAddModal?.addEventListener("click", (e) => {
+    if (e.target === elements.kanjiAddModal) closeAddKanjiModal();
+  });
 
   // Close dictionary when clicking outside the modal content
   elements.kanjiDictModal?.addEventListener("click", (e) => {
@@ -287,6 +299,20 @@ document.addEventListener("DOMContentLoaded", () => {
   if (savedUrl && !elements.urlInput.value.includes(savedUrl)) {
     elements.urlInput.value = savedUrl;
   }
+  
+  const savedAppsUrl = localStorage.getItem("appsScriptUrl");
+  if (savedAppsUrl && elements.appsScriptUrlInput) {
+    elements.appsScriptUrlInput.value = savedAppsUrl;
+  }
+  
+  elements.appsScriptUrlInput?.addEventListener("change", (e) => {
+    const val = e.target.value.trim();
+    if (val) {
+      localStorage.setItem("appsScriptUrl", val);
+    } else {
+      localStorage.removeItem("appsScriptUrl");
+    }
+  });
   
   setActiveTab("practicePanel");
   autoLoadDefaultUrl();

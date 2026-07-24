@@ -74,6 +74,13 @@
             <input id="urlInput" type="text" value="https://docs.google.com/spreadsheets/d/1Lsvnce88zkeASGQPzPJXcjfg2yBjx1b2yMlloLmDy7I/edit?gid=0#gid=0" />
             <button id="importBtn" class="secondary" type="button" style="margin-top: 12px; width: 100%;">Tải dữ liệu từ URL</button>
           </div>
+          <div class="url-import-section" style="margin-top: 16px; border-top: 1px dashed var(--border-color); padding-top: 16px;">
+            <label for="appsScriptUrlInput" style="display: flex; justify-content: space-between; align-items: center;">
+              <span>Liên kết Google Apps Script API</span>
+              <span style="font-size: 0.75rem; color: var(--text-tertiary); font-weight: 400;">Để tự động thêm Kanji</span>
+            </label>
+            <input id="appsScriptUrlInput" type="password" placeholder="https://script.google.com/macros/s/..." />
+          </div>
         </div>
       </div>
 
@@ -266,9 +273,18 @@
     <div class="dict-modal-inner">
       <div class="dict-header-row">
         <h3>Tra Cứu Kanji</h3>
-        <button id="dictCloseBtn" class="dict-close-btn" type="button" title="Đóng" aria-label="Đóng">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        </button>
+        <div class="dict-header-actions" style="display: flex; gap: 8px;">
+          <button id="dictAddBtn" class="dict-add-btn hidden" type="button" title="Thêm vào Sheet" aria-label="Thêm vào Sheet">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span class="dict-add-btn-text">Thêm</span>
+          </button>
+          <button id="dictBackBtn" class="dict-close-btn hidden" type="button" title="Quay lại" aria-label="Quay lại">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <button id="dictCloseBtn" class="dict-close-btn" type="button" title="Đóng" aria-label="Đóng">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
       </div>
       <div class="dict-search-section">
         <div class="dict-search-wrap">
@@ -307,7 +323,43 @@
     </button>
   </div>
 
-  <script src="libs/xlsx.full.min.js"></script>
+  <dialog id="kanjiAddModal" class="dict-modal hidden">
+    <div class="dict-modal-inner" style="max-width: 400px;">
+      <div class="dict-header-row">
+        <h3>Thêm vào Sheet</h3>
+        <button id="kanjiAddCloseBtn" class="dict-close-btn" type="button" title="Đóng">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="dict-body" style="padding: 24px; padding-top: 16px; overflow-y: visible;">
+        <div style="margin-bottom: 24px; display: flex; gap: 20px; align-items: center; justify-content: center; padding: 16px; background: rgba(15, 118, 110, 0.04); border-radius: 16px; border: 1px solid rgba(15, 118, 110, 0.1);">
+          <div id="kanjiAddDisplay" style="width: 80px; height: 80px; background: #fff; border-radius: 16px; display: grid; place-items: center; font-size: 3.5rem; line-height: 1; flex-shrink: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); color: var(--ink);"></div>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 0.85rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Âm Hán Việt</span>
+            <div id="kanjiAddHanviet" style="font-size: 1.4rem; font-weight: 800; color: var(--teal-dark);"></div>
+          </div>
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label for="kanjiAddLesson" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.95rem;">Bài số mấy?</label>
+          <input id="kanjiAddLesson" type="text" placeholder="VD: 1, 2, B1..." autocomplete="off" />
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 24px;">
+          <label for="kanjiAddMnemonic" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.95rem;">Cách nhớ (Tùy chọn)</label>
+          <textarea id="kanjiAddMnemonic" rows="3" placeholder="Ghi chú cách nhớ chữ này..." style="width: 100%; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 16px; font-family: inherit; font-size: 1rem; transition: all 0.2s; resize: vertical; min-height: 80px; outline: none;"></textarea>
+        </div>
+        
+        <button id="kanjiAddSubmitBtn" class="primary" type="button" style="width: 100%; height: 48px; font-size: 1.1rem; display: flex; justify-content: center; align-items: center; gap: 8px;">
+          <span>Gửi lên Sheets</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        </button>
+        <div id="kanjiAddStatus" style="margin-top: 12px; text-align: center; font-size: 0.85rem; font-weight: 500;"></div>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script type="module" src="assets/js/app.js"></script>
 </body>
 </html>
