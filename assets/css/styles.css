@@ -489,7 +489,12 @@ body {
 .addon-btn {
   position: absolute;
   right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
   min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 4px 12px;
   font-size: 0.85rem;
   border-radius: 8px;
@@ -501,7 +506,7 @@ body {
 .addon-btn:hover {
   background: rgba(15, 118, 110, 0.15);
   box-shadow: none;
-  transform: scale(0.98);
+  transform: translateY(-50%) scale(0.98);
 }
 
 .toggle-list {
@@ -1734,15 +1739,24 @@ body.dark-mode .wb-toggle-btn.active {
 
   .app-tabs {
     width: 100%;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
     margin-bottom: 16px;
   }
 
+  .app-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
   .tab-button {
-    width: 100%;
-    min-width: 0;
-    padding: 10px 8px;
+    width: auto;
+    flex: 1 0 auto;
+    padding: 10px 12px;
+    font-size: 0.9rem;
   }
 
   .card {
