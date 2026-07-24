@@ -273,9 +273,16 @@ async function fetchWithTimeout(url, options = {}) {
   const timeoutId = window.setTimeout(() => controller.abort(), REMOTE_FETCH_TIMEOUT_MS);
 
   try {
+    const urlObj = new URL(url, window.location.href);
+    urlObj.searchParams.set('_t', Date.now());
+    url = urlObj.toString();
+  } catch (e) {
+    // Nếu URL không hợp lệ thì để nguyên
+  }
+
+  try {
     return await fetch(url, {
       ...options,
-      cache: "no-store",
       signal: controller.signal
     });
   } finally {
