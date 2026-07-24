@@ -482,8 +482,10 @@ body {
   align-items: center;
 }
 
-.input-with-addon input {
-  padding-right: 70px;
+.input-with-addon input[type="number"],
+.input-with-addon input[type="text"] {
+  padding-right: 70px !important;
+  width: 100%;
 }
 
 .addon-btn {
@@ -491,22 +493,30 @@ body {
   right: 6px;
   top: 50%;
   transform: translateY(-50%);
-  min-height: 36px;
-  display: flex;
+  min-height: 36px !important;
+  height: 36px;
+  width: auto !important;
+  min-width: 0 !important;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 12px;
+  padding: 0 12px !important;
   font-size: 0.85rem;
+  font-weight: 700;
   border-radius: 8px;
   background: rgba(15, 118, 110, 0.08);
   color: var(--teal-dark);
   box-shadow: none;
+  border: none;
+  cursor: pointer;
+  margin: 0 !important;
+  transition: all 0.2s ease;
 }
 
 .addon-btn:hover {
   background: rgba(15, 118, 110, 0.15);
   box-shadow: none;
-  transform: translateY(-50%) scale(0.98);
+  transform: translateY(-50%) scale(0.95);
 }
 
 .toggle-list {
