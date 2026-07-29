@@ -80,10 +80,11 @@ async function searchMazii(query) {
       })
       .map(r => ({
         kanji: r.kanji,
-        hanViet: cleanHanViet(r.mean, query),
+        hanViet: r.mean || "",
         detail: (r.detail || "").replace(/##/g, " - ").replace(/\n/g, " - ").substring(0, 60),
         jlpt: Array.isArray(r.level) ? r.level[0] : r.level
-      }));
+      }))
+      .slice(0, 20);
 
     searchCache.set(query, results);
     return results;

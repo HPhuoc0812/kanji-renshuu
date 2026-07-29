@@ -1,58 +1,62 @@
-# Luong Project Kanji Renshuu
+# Luồng Project Kanji Renshuu
 
-## 1. Tong quan
+## 1. Tổng quan
 
-Kanji Renshuu la mot web app tinh/PWA dung de luyen Kanji bang du lieu tu Excel, CSV hoac Google Sheets.
+Kanji Renshuu là một web app tĩnh/PWA dùng để luyện Kanji bằng dữ liệu từ Excel, CSV hoặc Google Sheets.
 
-Project gom cac file chinh:
+Project gồm các file chính:
 
-- `index.html`: dung giao dien chinh.
-- `assets/js/app.js`: entrypoint, bind event, khoi dong app va dang ky service worker.
-- `assets/js/constants.js`: hang so dung chung.
-- `assets/js/dom.js`: gom DOM references dung chung cho cac module.
-- `assets/js/data.js`: load/cache/import/chuan hoa du lieu Kanji.
-- `assets/js/quiz.js`: tao quiz, render cau hoi, cham diem va phim dieu huong dap an.
-- `assets/js/radicals.js`: load, loc va render du lieu bo thu.
-- `assets/js/ui.js`: theme, tab, error UI va helper UI nho.
-- `assets/js/utils.js`: helper chuan hoa text, random va shuffle.
-- `assets/css/styles.css`: style giao dien.
-- `assets/data/kanji-cache.json`: du lieu Kanji tinh di kem app de phong truong hop chua co internet/cache runtime.
-- `assets/data/radicals.json`: du lieu 214 bo thu Kanji/Kangxi.
-- `libs/xlsx.full.min.js`: thu vien doc file Excel.
+- `index.html`: dựng giao diện chính.
+- `assets/js/app.js`: entrypoint, bind event, khởi động app và đăng ký service worker.
+- `assets/js/constants.js`: hằng số dùng chung.
+- `assets/js/dom.js`: gom DOM references dùng chung cho các module.
+- `assets/js/data.js`: load/cache/import/chuẩn hóa dữ liệu Kanji.
+- `assets/js/quiz.js`: tạo quiz, render câu hỏi, chấm điểm và phím điều hướng đáp án.
+- `assets/js/radicals.js`: load, lọc và render dữ liệu bộ thủ.
+- `assets/js/ui.js`: theme, tab, error UI và helper UI nhỏ.
+- `assets/js/utils.js`: helper chuẩn hóa text, random và shuffle.
+- `assets/js/dictionary.js`: logic tra cứu từ điển Kanji, gọi Mazii API, popup chi tiết và tính năng thêm vào Sheets.
+- `assets/js/whiteboard.js`: chức năng bảng vẽ Kanji (tích hợp trong quiz).
+- `assets/js/kanji-guide.js`: vẽ hoạt ảnh hướng dẫn nét chữ Kanji.
+- `assets/js/similar-kanji.js`: dữ liệu và logic tìm các chữ Kanji có hình dáng tương đồng.
+- `assets/css/styles.css`: style giao diện.
+- `assets/data/kanji-cache.json`: dữ liệu Kanji tĩnh đi kèm app để phòng trường hợp chưa có internet/cache runtime.
+- `assets/data/radicals.json`: dữ liệu 214 bộ thủ Kanji/Kangxi.
+- `libs/xlsx.full.min.js`: thư viện đọc file Excel.
 - `sw.js`: service worker cho cache/offline.
-- `manifest.webmanifest`: cau hinh PWA.
-- `dev-server.mjs`: server local don gian de chay app.
+- `manifest.webmanifest`: cấu hình PWA.
+- `dev-server.mjs`: server local đơn giản để chạy app.
 
-### 1.1. Nguyen tac chia module
+### 1.1. Nguyên tắc chia module
 
-App van la vanilla JavaScript, khong dung bundler/framework. Cac file trong `assets/js` la ES modules va duoc browser load truc tiep.
+App vẫn là vanilla JavaScript, không dùng bundler/framework. Các file trong `assets/js` là ES modules và được browser load trực tiếp.
 
-Ranh gioi chinh:
+Ranh giới chính:
 
-- `app.js` chi dieu phoi: import module, bind event, goi init.
-- `data.js` quan ly state Kanji va cac nguon du lieu.
-- `quiz.js` quan ly state quiz rieng, khong parse/import data.
-- `radicals.js` quan ly rieng tab tra cuu bo thu.
-- `ui.js` xu ly thao tac UI dung chung.
-- `dom.js` gom cac selector tap trung de tranh lap lai `document.getElementById(...)`.
-- `constants.js` gom cac key/cache path/gioi han.
-- `utils.js` gom helper thuan, khong dung DOM.
+- `app.js` chỉ điều phối: import module, bind event, gọi init.
+- `data.js` quản lý state Kanji và các nguồn dữ liệu.
+- `quiz.js` quản lý state quiz riêng, không parse/import data.
+- `radicals.js` quản lý riêng tab tra cứu bộ thủ.
+- `ui.js` xử lý thao tác UI dùng chung.
+- `dom.js` gom các selector tập trung để tránh lặp lại `document.getElementById(...)`.
+- `constants.js` gồm các key/cache path/giới hạn.
+- `utils.js` gồm helper thuần, không đụng DOM.
 
-## 2. Luong khoi dong app
+## 2. Luồng khởi động app
 
-Khi mo `index.html`, trinh duyet load theo thu tu:
+Khi mở `index.html`, trình duyệt load theo thứ tự:
 
-1. CSS tu `assets/css/styles.css`.
-2. Thu vien Excel `libs/xlsx.full.min.js`.
+1. CSS từ `assets/css/styles.css`.
+2. Thư viện Excel `libs/xlsx.full.min.js`.
 3. File module entrypoint `assets/js/app.js`.
 
-`index.html` load entrypoint bang:
+`index.html` load entrypoint bằng:
 
 ```html
 <script type="module" src="assets/js/app.js"></script>
 ```
 
-Trong `assets/js/app.js`, khi su kien `DOMContentLoaded` chay, app goi:
+Trong `assets/js/app.js`, khi sự kiện `DOMContentLoaded` chạy, app gọi:
 
 ```js
 loadThemePreference();
@@ -62,187 +66,187 @@ autoLoadDefaultUrl();
 loadRadicalsData();
 ```
 
-Y nghia:
+Ý nghĩa:
 
-1. `loadThemePreference()` doc theme sang/toi tu `localStorage`. Neu chua co thi lay theo theme cua he thong.
-2. `setModeSelectValue()` dong bo segmented control voi select that.
-3. `setActiveTab("practicePanel")` dat tab mac dinh la tab luyen tap.
-4. `autoLoadDefaultUrl()` uu tien tai du lieu Kanji da cache, sau do doc `kanji-cache.json` neu can, roi moi tu dong cap nhat tu URL mac dinh khi co mang.
-5. `loadRadicalsData()` tai file JSON 214 bo thu de phuc vu tab tra cuu.
+1. `loadThemePreference()` đọc theme sáng/tối từ `localStorage`. Nếu chưa có thì lấy theo theme của hệ thống.
+2. `setModeSelectValue()` đồng bộ segmented control với select thật.
+3. `setActiveTab("practicePanel")` đặt tab mặc định là tab luyện tập.
+4. `autoLoadDefaultUrl()` ưu tiên tải dữ liệu Kanji đã cache, sau đó đọc `kanji-cache.json` nếu cần, rồi mới tự động cập nhật từ URL mặc định khi có mạng.
+5. `loadRadicalsData()` tải file JSON 214 bộ thủ để phục vụ tab tra cứu.
 
-Sau khi trang load xong, app dang ky service worker:
+Sau khi trang load xong, app đăng ký service worker:
 
 ```js
 navigator.serviceWorker.register("./sw.js")
 ```
 
-Neu dang ky service worker that bai, app van chay binh thuong, chi mat tinh nang PWA/offline cache cua app shell.
+Nếu đăng ký service worker thất bại, app vẫn chạy bình thường, chỉ mất tính năng PWA/offline cache của app shell.
 
-## 3. Cau truc giao dien
+## 3. Cấu trúc giao diện
 
-Giao dien trong `index.html` co 2 tab chinh:
+Giao diện trong `index.html` có 2 tab chính:
 
-- Tab `Luyen tap`: gom setup card va quiz area.
-- Tab `Tra cuu bo thu`: gom cong cu tim kiem/lien ket du lieu 214 bo thu.
+- Tab `Luyện tập`: gồm setup card và quiz area.
+- Tab `Tra cứu bộ thủ`: gồm công cụ tìm kiếm/lọc và dữ liệu 214 bộ thủ.
 
-Hai tab duoc dieu khien bang:
+Hai tab được điều khiển bằng:
 
 - `practiceTabBtn`
 - `radicalsTabBtn`
 - `practicePanel`
 - `radicalsPanel`
 
-Ham dieu khien:
+Hàm điều khiển:
 
 ```js
 setActiveTab(panelId)
 ```
 
-Ham nay:
+Hàm này:
 
-1. Toggle class `hidden` tren cac `.tab-panel`.
-2. Cap nhat `aria-hidden` cho panel.
-3. Cap nhat class `active` va `aria-selected` cho nut tab.
+1. Toggle class `hidden` trên các `.tab-panel`.
+2. Cập nhật `aria-hidden` cho panel.
+3. Cập nhật class `active` và `aria-selected` cho nút tab.
 
 ### 3.1. Practice tab
 
-Day la tab mac dinh khi mo app, co 2 khu vuc chinh.
+Đây là tab mặc định khi mở app, có 2 khu vực chính.
 
 #### 3.1.1. Setup card
 
-Day la khu vuc cau hinh truoc khi bat dau luyen tap.
+Đây là khu vực cấu hình trước khi bắt đầu luyện tập.
 
-Bao gom:
+Bao gồm:
 
-- Chon file Excel/CSV: `fileInput`.
-- Chon che do luyen: `modeSelect`.
-- Nhap so cau: `questionCount`.
-- Nut chon so cau toi da: `maxQuestionBtn`.
-- Loc theo bai:
+- Chọn file Excel/CSV: `fileInput`.
+- Chọn chế độ luyện: `modeSelect`.
+- Nhập số câu: `questionCount`.
+- Nút chọn số câu tối đa: `maxQuestionBtn`.
+- Lọc theo bài:
   - `lessonFrom`
   - `lessonTo`
-- Nhap URL Excel/CSV/Google Sheets: `urlInput`.
-- Nut import tu URL: `importBtn`.
-- Nut bat dau luyen tap: `startBtn`.
-- Vung hien thi trang thai: `fileInfo`.
-- Vung hien thi loi: `errorMessage`.
+- Nhập URL Excel/CSV/Google Sheets: `urlInput`.
+- Nút import từ URL: `importBtn`.
+- Nút bắt đầu luyện tập: `startBtn`.
+- Vùng hiển thị trạng thái: `fileInfo`.
+- Vùng hiển thị lỗi: `errorMessage`.
 
 #### 3.1.2. Quiz area
 
-Khu vuc quiz ban dau bi an bang class `hidden`.
+Khu vực quiz ban đầu bị ẩn bằng class `hidden`.
 
-Bao gom:
+Bao gồm:
 
-- Trang thai cau hoi: `quizStatus`.
-- Diem hien tai: `scoreInfo`.
-- Noi dung cau hoi: `questionPrompt`.
-- Danh sach dap an: `options`.
-- Nut xac nhan: `confirmBtn`.
-- Nut cau tiep theo: `nextBtn`.
-- Nut lam lai: `resetBtn`.
+- Trạng thái câu hỏi: `quizStatus`.
+- Điểm hiện tại: `scoreInfo`.
+- Nội dung câu hỏi: `questionPrompt`.
+- Danh sách đáp án: `options`.
+- Nút xác nhận: `confirmBtn`.
+- Nút câu tiếp theo: `nextBtn`.
+- Nút làm lại: `resetBtn`.
 
-Khi nguoi dung bam "Bat dau luyen tap", neu tao quiz thanh cong thi khu vuc nay moi hien ra.
+Khi người dùng bấm "Bắt đầu luyện tập", nếu tạo quiz thành công thì khu vực này mới hiện ra.
 
 ### 3.2. Radicals tab
 
-Day la tab tra cuu 214 bo thu.
+Đây là tab tra cứu 214 bộ thủ.
 
-Bao gom:
+Bao gồm:
 
-- Vung dem ket qua: `radicalsCount`.
-- O tim kiem: `radicalsSearch`.
-- Bo loc so net: `radicalsStrokeFilter`.
-- Luoi hien thi bo thu: `radicalsGrid`.
-- Vung thong bao: `radicalsMessage`.
+- Vùng đếm kết quả: `radicalsCount`.
+- Ô tìm kiếm: `radicalsSearch`.
+- Bộ lọc số nét: `radicalsStrokeFilter`.
+- Lưới hiển thị bộ thủ: `radicalsGrid`.
+- Vùng thông báo: `radicalsMessage`.
 
-Moi item bo thu hien:
+Mỗi item bộ thủ hiện:
 
-- Ky tu bo thu chinh.
-- So thu tu.
-- Am Han Viet.
-- So net.
-- Nghia.
-- Cac dang bien the neu co.
+- Ký tự bộ thủ chính.
+- Số thứ tự.
+- Âm Hán Việt.
+- Số nét.
+- Nghĩa.
+- Các dạng biến thể nếu có.
 
-## 4. Luong du lieu
+## 4. Luồng dữ liệu
 
-App co 2 nhom du lieu:
+App có 2 nhóm dữ liệu:
 
-1. Du lieu Kanji de luyen tap.
-2. Du lieu bo thu de tra cuu.
+1. Dữ liệu Kanji để luyện tập.
+2. Dữ liệu bộ thủ để tra cứu.
 
-Du lieu Kanji co 4 nguon:
+Dữ liệu Kanji có 4 nguồn:
 
 1. Google Sheets / URL.
-2. File local Excel hoac CSV.
-3. Du lieu da luu trong `localStorage`.
-4. File tinh `assets/data/kanji-cache.json`.
+2. File local Excel hoặc CSV.
+3. Dữ liệu đã lưu trong `localStorage`.
+4. File tĩnh `assets/data/kanji-cache.json`.
 
-Thu tu uu tien khi app khoi dong:
+Thứ tự ưu tiên khi app khởi động:
 
-1. Doc du lieu da import/cap nhat trong `localStorage` bang `loadKanjiDataFromStorage()`.
-2. Neu chua co `localStorage`, doc seed JSON `assets/data/kanji-cache.json` bang `loadBundledKanjiData()`.
-3. Neu trinh duyet bao co mang, goi `parseRemoteUrl(defaultUrl)` de cap nhat du lieu moi tu URL mac dinh.
-4. Neu URL cap nhat thanh cong, du lieu moi se ghi vao `localStorage` bang `saveKanjiDataToStorage()`.
-5. Neu ca JSON di kem cung khong doc duoc, app moi dung `fallbackData` toi thieu trong code.
+1. Đọc dữ liệu đã import/cập nhật trong `localStorage` bằng `loadKanjiDataFromStorage()`.
+2. Nếu chưa có `localStorage`, đọc seed JSON `assets/data/kanji-cache.json` bằng `loadBundledKanjiData()`.
+3. Nếu trình duyệt báo có mạng, gọi `parseRemoteUrl(defaultUrl)` để cập nhật dữ liệu mới từ URL mặc định.
+4. Nếu URL cập nhật thành công, dữ liệu mới sẽ ghi vào `localStorage` bằng `saveKanjiDataToStorage()`.
+5. Nếu cả JSON đi kèm cũng không đọc được, app mới dùng `fallbackData` tối thiểu trong code.
 
-### 4.1. Du lieu tu Google Sheets / URL
+### 4.1. Dữ liệu từ Google Sheets / URL
 
-Ham chinh:
+Hàm chính:
 
 ```js
 parseRemoteUrl(url)
 ```
 
-Luong xu ly:
+Luồng xử lý:
 
-1. Nguoi dung bam `Import tu URL`, hoac app tu dong goi `autoLoadDefaultUrl()` khi mo trang.
-2. URL duoc dua vao `parseRemoteUrl(url)`.
-3. Neu URL la Google Sheets, app goi `normalizeGoogleSheetsUrl(url)` de doi link edit thanh link export CSV.
-4. App dung `fetchWithTimeout()` de tai du lieu, gioi han thoi gian cho request remote.
-5. Neu response la CSV, app doc text va goi `loadCsvText(text)`.
-6. Neu response la Excel, app doc buffer va goi `parseExcelBuffer(buffer)`.
-7. Neu khong xac dinh duoc ro kieu file, app thu doc nhu CSV.
-8. Du lieu sau cung duoc dua vao `loadDataFromJson(json)`.
+1. Người dùng bấm `Import từ URL`, hoặc app tự động gọi `autoLoadDefaultUrl()` khi mở trang.
+2. URL được đưa vào `parseRemoteUrl(url)`.
+3. Nếu URL là Google Sheets, app gọi `normalizeGoogleSheetsUrl(url)` để đổi link edit thành link export CSV.
+4. App dùng `fetchWithTimeout()` để tải dữ liệu, giới hạn thời gian cho request remote.
+5. Nếu response là CSV, app đọc text và gọi `loadCsvText(text)`.
+6. Nếu response là Excel, app đọc buffer và gọi `parseExcelBuffer(buffer)`.
+7. Nếu không xác định được rõ kiểu file, app thử đọc như CSV.
+8. Dữ liệu sau cùng được đưa vào `loadDataFromJson(json)`.
 
-Neu trinh duyet dang offline, app bo qua fetch remote va dung du lieu offline. Neu fetch that bai hoac timeout, app thu doc du lieu da cache trong `localStorage` bang `loadKanjiDataFromStorage()`.
+Nếu trình duyệt đang offline, app bỏ qua fetch remote và dùng dữ liệu offline. Nếu fetch thất bại hoặc timeout, app thử đọc dữ liệu đã cache trong `localStorage` bằng `loadKanjiDataFromStorage()`.
 
-### 4.2. Du lieu tu file local
+### 4.2. Dữ liệu từ file local
 
-Event chinh:
+Event chính:
 
 ```js
 fileInput.addEventListener("change", ...)
 ```
 
-Luong xu ly:
+Luồng xử lý:
 
-1. Nguoi dung chon file.
-2. App kiem tra ten file.
-3. Neu file ket thuc bang `.csv`, goi `parseCsv(file)`.
-4. Neu file ket thuc bang `.xlsx` hoac `.xls`, goi `parseExcel(file)`.
-5. Neu khong dung dinh dang, hien loi.
+1. Người dùng chọn file.
+2. App kiểm tra tên file.
+3. Nếu file kết thúc bằng `.csv`, gọi `parseCsv(file)`.
+4. Nếu file kết thúc bằng `.xlsx` hoặc `.xls`, gọi `parseExcel(file)`.
+5. Nếu không đúng định dạng, hiện lỗi.
 
-Voi CSV:
+Với CSV:
 
-1. `parseCsv(file)` doc file bang `FileReader`.
-2. Sau khi doc xong, goi `loadCsvText(csv)`.
-3. `loadCsvText()` tach header va cac dong du lieu.
-4. Moi dong CSV duoc map thanh object JSON.
-5. Goi `loadDataFromJson(json)`.
+1. `parseCsv(file)` đọc file bằng `FileReader`.
+2. Sau khi đọc xong, gọi `loadCsvText(csv)`.
+3. `loadCsvText()` tách header và các dòng dữ liệu.
+4. Mỗi dòng CSV được map thành object JSON.
+5. Gọi `loadDataFromJson(json)`.
 
-Voi Excel:
+Với Excel:
 
-1. `parseExcel(file)` doc file thanh `ArrayBuffer`.
-2. Goi `parseExcelBuffer(buffer)`.
-3. `parseExcelBuffer()` dung thu vien `XLSX`.
-4. Lay sheet dau tien trong workbook.
-5. Chuyen sheet thanh JSON.
-6. Goi `loadDataFromJson(json)`.
+1. `parseExcel(file)` đọc file thành `ArrayBuffer`.
+2. Gọi `parseExcelBuffer(buffer)`.
+3. `parseExcelBuffer()` dùng thư viện `XLSX`.
+4. Lấy sheet đầu tiên trong workbook.
+5. Chuyển sheet thành JSON.
+6. Gọi `loadDataFromJson(json)`.
 
-### 4.3. Du lieu da cache trong localStorage
+### 4.3. Dữ liệu đã cache trong localStorage
 
-Du lieu import thanh cong tu URL, Google Sheets, Excel hoac CSV duoc luu vao `localStorage`.
+Dữ liệu import thành công từ URL, Google Sheets, Excel hoặc CSV được lưu vào `localStorage`.
 
 Key cache:
 
@@ -250,7 +254,7 @@ Key cache:
 kanji-renshuu-data-v1
 ```
 
-Moi ban ghi cache gom:
+Mỗi bản ghi cache gồm:
 
 ```js
 {
@@ -260,19 +264,19 @@ Moi ban ghi cache gom:
 }
 ```
 
-Day la lop du lieu dong cua app. Browser co the tu ghi/cap nhat lop nay khi app dang chay.
+Đây là lớp dữ liệu động của app. Browser có thể tự ghi/cập nhật lớp này khi app đang chạy.
 
-### 4.4. Du lieu Kanji tinh di kem app
+### 4.4. Dữ liệu Kanji tĩnh đi kèm app
 
-Du lieu Kanji tinh nam trong:
+Dữ liệu Kanji tĩnh nằm trong:
 
 ```text
 assets/data/kanji-cache.json
 ```
 
-File nay co vai tro nhu seed/fallback cho lan dau mo app khi chua co internet hoac chua tung import du lieu.
+File này có vai trò như seed/fallback cho lần đầu mở app khi chưa có internet hoặc chưa từng import dữ liệu.
 
-Dang du lieu:
+Dạng dữ liệu:
 
 ```js
 {
@@ -288,40 +292,40 @@ Dang du lieu:
 }
 ```
 
-Trong do:
+Trong đó:
 
-- `version`: version du lieu tinh.
-- `hasLessonInfo`: cho biet seed co ho tro cot bai hay khong.
-- `items`: danh sach Kanji dung de luyen tap.
+- `version`: version dữ liệu tĩnh.
+- `hasLessonInfo`: cho biết seed có hỗ trợ cột bài hay không.
+- `items`: danh sách Kanji dùng để luyện tập.
 
-Neu `lesson` khong co trong item, app van dung duoc nhung khong loc theo bai.
+Nếu `lesson` không có trong item, app vẫn dùng được nhưng không lọc theo bài.
 
-Ham tai du lieu:
+Hàm tải dữ liệu:
 
 ```js
 loadBundledKanjiData()
 ```
 
-Luong xu ly:
+Luồng xử lý:
 
-1. Goi `fetch("assets/data/kanji-cache.json")`.
-2. Parse response thanh JSON.
-3. Kiem tra `items` la array va khong rong.
-4. Gan du lieu vao `bundledKanjiData`.
-5. Goi `setKanjiData(...)` de app co du lieu luyen tap ngay ca khi chua co internet.
-6. Neu doc JSON that bai, app dung `fallbackData` toi thieu trong code.
+1. Gọi `fetch("assets/data/kanji-cache.json")`.
+2. Parse response thành JSON.
+3. Kiểm tra `items` là array và không rỗng.
+4. Gán dữ liệu vào `bundledKanjiData`.
+5. Gọi `setKanjiData(...)` để app có dữ liệu luyện tập ngay cả khi chưa có internet.
+6. Nếu đọc JSON thất bại, app dùng `fallbackData` tối thiểu trong code.
 
-Luu y quan trong:
+Lưu ý quan trọng:
 
-- Browser/PWA khong the tu ghi nguoc vao file `assets/data/kanji-cache.json`.
-- Khi co internet, du lieu moi duoc cap nhat vao `localStorage`, khong sua file JSON tinh.
-- Muon cap nhat file JSON that trong repo thi can sua file thu cong hoac dung script/build step ben ngoai browser.
+- Browser/PWA không thể tự ghi ngược vào file `assets/data/kanji-cache.json`.
+- Khi có internet, dữ liệu mới được cập nhật vào `localStorage`, không sửa file JSON tĩnh.
+- Muốn cập nhật file JSON thật trong repo thì cần sửa file thủ công hoặc dùng script/build step bên ngoài browser.
 
-### 4.5. Du lieu fallback
+### 4.5. Dữ liệu fallback
 
-Neu chua co du lieu import va khong doc duoc `kanji-cache.json`, app dung `fallbackData` toi thieu trong `assets/js/app.js`.
+Nếu chưa có dữ liệu import và không đọc được `kanji-cache.json`, app dùng `fallbackData` tối thiểu trong `assets/js/app.js`.
 
-Ham chon nguon du lieu:
+Hàm chọn nguồn dữ liệu:
 
 ```js
 function getSourceData() {
@@ -329,20 +333,20 @@ function getSourceData() {
 }
 ```
 
-Nghia la:
+Nghĩa là:
 
-- Neu `kanjiData` co du lieu, dung du lieu dang active.
-- Neu `kanjiData` rong, dung du lieu tinh/fallback trong `bundledKanjiData`.
+- Nếu `kanjiData` có dữ liệu, dùng dữ liệu đang active.
+- Nếu `kanjiData` rỗng, dùng dữ liệu tĩnh/fallback trong `bundledKanjiData`.
 
-### 4.6. Du lieu 214 bo thu
+### 4.6. Dữ liệu 214 bộ thủ
 
-Du lieu bo thu nam trong:
+Dữ liệu bộ thủ nằm trong:
 
 ```text
 assets/data/radicals.json
 ```
 
-Moi item co dang:
+Mỗi item có dạng:
 
 ```js
 {
@@ -350,48 +354,48 @@ Moi item co dang:
   radical: "一",
   variants: [],
   strokes: 1,
-  hanViet: "nhat",
-  meaning: "mot"
+  hanViet: "nhất",
+  meaning: "một"
 }
 ```
 
-Trong do:
+Trong đó:
 
-- `id`: so thu tu bo thu.
-- `radical`: ky tu bo thu chinh.
-- `variants`: cac dang bien the.
-- `strokes`: so net.
-- `hanViet`: am Han Viet.
-- `meaning`: nghia tieng Viet.
+- `id`: số thứ tự bộ thủ.
+- `radical`: ký tự bộ thủ chính.
+- `variants`: các dạng biến thể.
+- `strokes`: số nét.
+- `hanViet`: âm Hán Việt.
+- `meaning`: nghĩa tiếng Việt.
 
-Ham tai du lieu:
+Hàm tải dữ liệu:
 
 ```js
 loadRadicalsData()
 ```
 
-Luong xu ly:
+Luồng xử lý:
 
-1. Goi `fetch("assets/data/radicals.json")`.
-2. Parse response thanh JSON.
-3. Kiem tra du lieu la array va khong rong.
-4. Gan vao bien `radicalsData`.
-5. Goi `populateRadicalStrokeFilter()` de tao danh sach so net.
-6. Goi `renderRadicals()` de hien thi danh sach ban dau.
+1. Gọi `fetch("assets/data/radicals.json")`.
+2. Parse response thành JSON.
+3. Kiểm tra dữ liệu là array và không rỗng.
+4. Gán vào biến `radicalsData`.
+5. Gọi `populateRadicalStrokeFilter()` để tạo danh sách số nét.
+6. Gọi `renderRadicals()` để hiển thị danh sách ban đầu.
 
-Neu tai that bai, app cap nhat `radicalsCount` va `radicalsMessage` de bao loi.
+Nếu tải thất bại, app cập nhật `radicalsCount` và `radicalsMessage` để báo lỗi.
 
-## 5. Chuan hoa du lieu
+## 5. Chuẩn hóa dữ liệu
 
-Ham quan trong:
+Hàm quan trọng:
 
 ```js
 loadDataFromJson(json)
 ```
 
-Ham nay tim cac cot can thiet trong file.
+Hàm này tìm các cột cần thiết trong file.
 
-Cot Kanji co the co ten:
+Cột Kanji có thể có tên:
 
 - `Kanji`
 - `kanji`
@@ -399,7 +403,7 @@ Cot Kanji co the co ten:
 - `kanji `
 - `B`
 
-Cot am Han / reading co the co ten:
+Cột âm Hán / reading có thể có tên:
 
 - `Âm Hán`
 - `ÂmHán`
@@ -409,7 +413,7 @@ Cot am Han / reading co the co ten:
 - `am han`
 - `C`
 
-Cot bai / lesson co the co ten:
+Cột bài / lesson có thể có tên:
 
 - `Bài`
 - `bài`
@@ -418,7 +422,7 @@ Cot bai / lesson co the co ten:
 - `Lesson`
 - `A`
 
-Sau khi tim duoc cot, moi dong du lieu duoc chuan hoa thanh:
+Sau khi tìm được cột, mỗi dòng dữ liệu được chuẩn hóa thành:
 
 ```js
 {
@@ -428,26 +432,26 @@ Sau khi tim duoc cot, moi dong du lieu duoc chuan hoa thanh:
 }
 ```
 
-Trong do:
+Trong đó:
 
-- `kanji`: chu Kanji.
-- `reading`: am Han.
-- `lesson`: so bai, neu khong co thi la `null`.
+- `kanji`: chữ Kanji.
+- `reading`: âm Hán.
+- `lesson`: số bài, nếu không có thì là `null`.
 
-Nhung dong thieu Kanji hoac reading se bi loai.
+Những dòng thiếu Kanji hoặc reading sẽ bị loại.
 
-Neu du lieu hop le, app goi:
+Nếu dữ liệu hợp lệ, app gọi:
 
 ```js
 setKanjiData(data, Boolean(lessonKey));
 saveKanjiDataToStorage();
 ```
 
-Ket qua:
+Kết quả:
 
-- Du lieu duoc luu vao bien `kanjiData`.
-- Trang thai co/khong co cot bai duoc luu vao `hasLessonInfo`.
-- Du lieu duoc cache vao `localStorage`.
+- Dữ liệu được lưu vào biến `kanjiData`.
+- Trạng thái có/không có cột bài được lưu vào `hasLessonInfo`.
+- Dữ liệu được cache vào `localStorage`.
 
 Key cache:
 
@@ -455,57 +459,57 @@ Key cache:
 kanji-renshuu-data-v1
 ```
 
-## 6. Luong tao quiz
+## 6. Luồng tạo quiz
 
-Khi nguoi dung bam nut "Bat dau luyen tap", event cua `startBtn` chay.
+Khi người dùng bấm nút "Bắt đầu luyện tập", event của `startBtn` chạy.
 
-Luong xu ly:
+Luồng xử lý:
 
-1. Neu chua co `kanjiData`, app bao dang dung du lieu mau.
-2. Goi `buildQuiz()`.
-3. Neu `buildQuiz()` tra ve `false`, dung lai va hien loi.
-4. Neu thanh cong, goi `showQuizArea()`.
+1. Nếu chưa có `kanjiData`, app báo đang dùng dữ liệu mẫu.
+2. Gọi `buildQuiz()`.
+3. Nếu `buildQuiz()` trả về `false`, dừng lại và hiện lỗi.
+4. Nếu thành công, gọi `showQuizArea()`.
 
-Ham tao quiz:
+Hàm tạo quiz:
 
 ```js
 buildQuiz()
 ```
 
-Ben trong `buildQuiz()`:
+Bên trong `buildQuiz()`:
 
-1. Lay so cau tu input `questionCount`.
-2. Gioi han so cau trong khoang hop le, toi da `MAX_QUESTION_COUNT = 300`.
-3. Goi `getFilteredSourceData()` de lay du lieu da loc theo bai.
-4. Kiem tra loi loc bai.
-5. Kiem tra co du item de tao quiz khong.
-6. Shuffle danh sach cau hoi.
-7. Lay dung so cau can luyen.
-8. Reset trang thai quiz:
+1. Lấy số câu từ input `questionCount`.
+2. Giới hạn số câu trong khoảng hợp lệ, tối đa `MAX_QUESTION_COUNT = 300`.
+3. Gọi `getFilteredSourceData()` để lấy dữ liệu đã lọc theo bài.
+4. Kiểm tra lỗi lọc bài.
+5. Kiểm tra có đủ item để tạo quiz không.
+6. Shuffle danh sách câu hỏi.
+7. Lấy đúng số câu cần luyện.
+8. Reset trạng thái quiz:
    - `score = 0`
    - `currentIndex = 0`
    - `selectedChoice = null`
    - `selectedButton = null`
 
-## 7. Luong loc theo bai
+## 7. Luồng lọc theo bài
 
-Ham chinh:
+Hàm chính:
 
 ```js
 getFilteredSourceData()
 ```
 
-Luong xu ly:
+Luồng xử lý:
 
-1. Lay source data bang `getSourceData()`.
-2. Doc gia tri `lessonFrom` va `lessonTo`.
-3. Xac dinh nguoi dung co nhap "Tu bai" hoac "Den bai" khong.
-4. Neu co loc theo bai nhung du lieu khong co cot bai, tra ve loi.
-5. Neu `from > to`, tra ve loi.
-6. Neu khong nhap pham vi bai, tra ve toan bo source data.
-7. Neu co nhap pham vi, chi giu item co `lesson` nam trong khoang.
+1. Lấy source data bằng `getSourceData()`.
+2. Đọc giá trị `lessonFrom` và `lessonTo`.
+3. Xác định người dùng có nhập "Từ bài" hoặc "Đến bài" không.
+4. Nếu có lọc theo bài nhưng dữ liệu không có cột bài, trả về lỗi.
+5. Nếu `from > to`, trả về lỗi.
+6. Nếu không nhập phạm vi bài, trả về toàn bộ source data.
+7. Nếu có nhập phạm vi, chỉ giữ item có `lesson` nằm trong khoảng.
 
-Ket qua tra ve dang:
+Kết quả trả về dạng:
 
 ```js
 {
@@ -514,7 +518,7 @@ Ket qua tra ve dang:
 }
 ```
 
-Neu co loi:
+Nếu có lỗi:
 
 ```js
 {
@@ -523,241 +527,241 @@ Neu co loi:
 }
 ```
 
-## 8. Luong hien thi cau hoi
+## 8. Luồng hiển thị câu hỏi
 
-Sau khi quiz duoc tao, app goi:
+Sau khi quiz được tạo, app gọi:
 
 ```js
 showQuizArea()
 ```
 
-Ham nay:
+Hàm này:
 
-1. Goi `setActiveTab("practicePanel")` de dam bao dang o tab luyen tap.
-2. Go class `hidden` khoi `quizArea`.
-3. Goi `renderQuestion()`.
-4. Scroll den khu vuc quiz.
+1. Gọi `setActiveTab("practicePanel")` để đảm bảo đang ở tab luyện tập.
+2. Gỡ class `hidden` khỏi `quizArea`.
+3. Gọi `renderQuestion()`.
+4. Scroll đến khu vực quiz.
 
-Ham hien thi cau hoi:
+Hàm hiển thị câu hỏi:
 
 ```js
 renderQuestion()
 ```
 
-Neu da het cau:
+Nếu đã hết câu:
 
-1. Hien text hoan thanh.
-2. Xoa danh sach dap an.
-3. Hien tong so cau da lam.
-4. Hien diem cuoi.
-5. An nut xac nhan va nut cau tiep theo.
+1. Hiện text hoàn thành.
+2. Xóa danh sách đáp án.
+3. Hiện tổng số câu đã làm.
+4. Hiện điểm cuối.
+5. Ẩn nút xác nhận và nút câu tiếp theo.
 
-Neu van con cau:
+Nếu vẫn còn câu:
 
-1. Lay item hien tai tu `quizItems[currentIndex]`.
-2. Lay che do hien tai tu `modeSelect.value`.
-3. Lay source data bang `getSourceData()`.
-4. Tao danh sach dap an bang `buildChoices(item, source, mode)`.
-5. Shuffle dap an.
-6. Xoa dap an cu trong `optionsContainer`.
-7. Render tung dap an thanh button.
-8. Cap nhat cau hoi theo mode:
-   - `reading-to-kanji`: nhin am Han, chon Kanji.
-   - `kanji-to-reading`: nhin Kanji, chon am Han.
-9. Cap nhat trang thai cau hoi va diem.
-10. Hien nut `Xac nhan`.
-11. An nut `Cau tiep theo`.
+1. Lấy item hiện tại từ `quizItems[currentIndex]`.
+2. Lấy chế độ hiện tại từ `modeSelect.value`.
+3. Lấy source data bằng `getSourceData()`.
+4. Tạo danh sách đáp án bằng `buildChoices(item, source, mode)`.
+5. Shuffle đáp án.
+6. Xóa đáp án cũ trong `optionsContainer`.
+7. Render từng đáp án thành button.
+8. Cập nhật câu hỏi theo mode:
+   - `reading-to-kanji`: nhìn âm Hán, chọn Kanji.
+   - `kanji-to-reading`: nhìn Kanji, chọn âm Hán.
+9. Cập nhật trạng thái câu hỏi và điểm.
+10. Hiện nút `Xác nhận`.
+11. Ẩn nút `Câu tiếp theo`.
 
-## 9. Luong tao dap an
+## 9. Luồng tạo đáp án
 
-Ham chinh:
+Hàm chính:
 
 ```js
 buildChoices(item, source, mode)
 ```
 
-Muc tieu: tao toi da 4 lua chon, trong do co 1 dap an dung.
+Mục tiêu: tạo tối đa 4 lựa chọn, trong đó có 1 đáp án đúng.
 
-Luong xu ly:
+Luồng xử lý:
 
-1. Dua item dung vao danh sach `choices`.
-2. Tao `usedDisplayValues` de tranh trung gia tri hien thi.
-3. Loc danh sach ung vien sai:
-   - Loai item trung ca Kanji va reading voi cau hien tai.
-   - Loai item co reading trung sau khi normalize.
-   - Loai item co gia tri hien thi da duoc dung.
-4. Shuffle ung vien sai.
-5. Them ung vien vao `choices` cho den khi du 4 dap an.
-6. Tra ve danh sach dap an.
+1. Đưa item đúng vào danh sách `choices`.
+2. Tạo `usedDisplayValues` để tránh trùng giá trị hiển thị.
+3. Lọc danh sách ứng viên sai:
+   - Loại item trùng cả Kanji và reading với câu hiện tại.
+   - Loại item có reading trùng sau khi normalize.
+   - Loại item có giá trị hiển thị đã được dùng.
+4. Shuffle ứng viên sai.
+5. Thêm ứng viên vào `choices` cho đến khi đủ 4 đáp án.
+6. Trả về danh sách đáp án.
 
-So dap an toi da:
+Số đáp án tối đa:
 
 ```js
 MAX_OPTION_COUNT = 4
 ```
 
-## 10. Luong chon dap an
+## 10. Luồng chọn đáp án
 
-Khi nguoi dung bam vao mot dap an, app goi:
+Khi người dùng bấm vào một đáp án, app gọi:
 
 ```js
 selectAnswer(choice, button)
 ```
 
-Ham nay:
+Hàm này:
 
-1. Neu truoc do da chon dap an khac, go class `selected` khoi button cu.
-2. Gan `selectedChoice = choice`.
-3. Gan `selectedButton = button`.
-4. Them class `selected` vao button moi.
+1. Nếu trước đó đã chọn đáp án khác, gỡ class `selected` khỏi button cũ.
+2. Gán `selectedChoice = choice`.
+3. Gán `selectedButton = button`.
+4. Thêm class `selected` vào button mới.
 
-Tai thoi diem nay app chua cham diem. Cham diem chi xay ra khi bam `Xac nhan`.
+Tại thời điểm này app chưa chấm điểm. Chấm điểm chỉ xảy ra khi bấm `Xác nhận`.
 
-## 11. Luong xac nhan dap an
+## 11. Luồng xác nhận đáp án
 
-Khi nguoi dung bam `Xac nhan`, app goi:
+Khi người dùng bấm `Xác nhận`, app gọi:
 
 ```js
 confirmAnswer()
 ```
 
-Luong xu ly:
+Luồng xử lý:
 
-1. Neu chua chon dap an, hien loi.
-2. Lay item hien tai tu `quizItems[currentIndex]`.
-3. So sanh dap an da chon voi dap an dung:
+1. Nếu chưa chọn đáp án, hiện lỗi.
+2. Lấy item hiện tại từ `quizItems[currentIndex]`.
+3. So sánh đáp án đã chọn với đáp án đúng:
 
 ```js
 selectedChoice.kanji === item.kanji &&
 selectedChoice.reading === item.reading
 ```
 
-4. Neu dung:
-   - Tang `score`.
-   - Button duoc them class `correct`.
-5. Neu sai:
-   - Button da chon duoc them class `wrong`.
-   - Dap an dung duoc them class `correct`.
-6. Disable tat ca option.
-7. Cap nhat diem.
-8. An nut `Xac nhan`.
-9. Hien nut `Cau tiep theo`.
+4. Nếu đúng:
+   - Tăng `score`.
+   - Button được thêm class `correct`.
+5. Nếu sai:
+   - Button đã chọn được thêm class `wrong`.
+   - Đáp án đúng được thêm class `correct`.
+6. Disable tất cả option.
+7. Cập nhật điểm.
+8. Ẩn nút `Xác nhận`.
+9. Hiện nút `Câu tiếp theo`.
 
-## 12. Luong cau tiep theo va ket thuc quiz
+## 12. Luồng câu tiếp theo và kết thúc quiz
 
-Khi nguoi dung bam `Cau tiep theo`, app chay:
+Khi người dùng bấm `Câu tiếp theo`, app chạy:
 
 ```js
 currentIndex += 1;
 renderQuestion();
 ```
 
-Neu `currentIndex` van nho hon tong so cau, app hien cau tiep theo.
+Nếu `currentIndex` vẫn nhỏ hơn tổng số câu, app hiện câu tiếp theo.
 
-Neu `currentIndex >= quizItems.length`, `renderQuestion()` hien man hinh hoan thanh va diem cuoi:
+Nếu `currentIndex >= quizItems.length`, `renderQuestion()` hiện màn hình hoàn thành và điểm cuối:
 
 ```js
 score / quizItems.length
 ```
 
-## 13. Luong lam lai
+## 13. Luồng làm lại
 
-Khi bam nut `Lam lai`, app chay:
+Khi bấm nút `Làm lại`, app chạy:
 
 ```js
 resetBtn.addEventListener("click", ...)
 ```
 
-Luong xu ly:
+Luồng xử lý:
 
-1. An `quizArea`.
-2. Xoa `kanjiData`.
-3. Xoa `quizItems`.
+1. Ẩn `quizArea`.
+2. Xóa `kanjiData`.
+3. Xóa `quizItems`.
 4. Reset `currentIndex = 0`.
 5. Reset `score = 0`.
-6. Cap nhat `fileInfo`.
-7. An loi.
-8. Goi `autoLoadDefaultUrl()` de tai lai du lieu tu URL/cache.
+6. Cập nhật `fileInfo`.
+7. Ẩn lỗi.
+8. Gọi `autoLoadDefaultUrl()` để tải lại dữ liệu từ URL/cache.
 
-Luu y: nut `Lam lai` hien tai khong chi reset bai quiz, ma con reset ca du lieu dang dung roi tai lai tu URL mac dinh.
+Lưu ý: nút `Làm lại` hiện tại không chỉ reset bài quiz, mà còn reset cả dữ liệu đang dùng rồi tải lại từ URL mặc định.
 
-## 14. Luong dark mode
+## 14. Luồng dark mode
 
-App dung key:
+App dùng key:
 
 ```js
 kanji-renshuu-theme
 ```
 
-Cac ham lien quan:
+Các hàm liên quan:
 
 - `loadThemePreference()`
 - `applyTheme(theme)`
 - `toggleTheme()`
 
-Luong xu ly:
+Luồng xử lý:
 
-1. Khi mo app, doc theme da luu trong `localStorage`.
-2. Neu khong co, dung `prefers-color-scheme`.
-3. Khi bam nut theme, app doi giua `light` va `dark`.
-4. Theme moi duoc luu lai vao `localStorage`.
-5. Body duoc toggle class `dark-mode`.
+1. Khi mở app, đọc theme đã lưu trong `localStorage`.
+2. Nếu không có, dùng `prefers-color-scheme`.
+3. Khi bấm nút theme, app đổi giữa `light` và `dark`.
+4. Theme mới được lưu lại vào `localStorage`.
+5. Body được toggle class `dark-mode`.
 
-## 15. Luong segmented mode control
+## 15. Luồng segmented mode control
 
-App co select that:
+App có select thật:
 
 ```html
 <select id="modeSelect">
 ```
 
-Select that duoc an bang class `native-select`, con UI nguoi dung thay la segmented control gom 2 nut:
+Select thật được ẩn bằng class `native-select`, còn UI người dùng thấy là segmented control gồm 2 nút:
 
 - `Âm Hán -> Kanji`
 - `Kanji -> Âm Hán`
 
-Cac ham lien quan:
+Các hàm liên quan:
 
 - `setModeSelectValue(value)`
 
-Khi bam mot mode segment:
+Khi bấm một mode segment:
 
-1. Cap nhat `modeSelect.value`.
-2. Cap nhat class `active` tren cac nut segment.
-3. Cap nhat `aria-pressed` de phan anh trang thai dang chon.
-4. Quiz doc mode hien tai tu `modeSelect.value`.
+1. Cập nhật `modeSelect.value`.
+2. Cập nhật class `active` trên các nút segment.
+3. Cập nhật `aria-pressed` để phản ánh trạng thái đang chọn.
+4. Quiz đọc mode hiện tại từ `modeSelect.value`.
 
-## 16. Phim tat
+## 16. Phím tắt
 
-Ham xu ly phim tat:
+Hàm xử lý phím tắt:
 
 ```js
 handleKeyboardShortcut(event)
 ```
 
-Cac phim tat:
+Các phím tắt:
 
-- `Enter` khi quiz dang an: bat dau luyen tap.
-- `R`: lam lai.
-- `M`: dat so cau bang max theo du lieu hien tai.
-- `ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`: di chuyen/chon option.
+- `Enter` khi quiz đang ẩn: bắt đầu luyện tập.
+- `R`: làm lại.
+- `M`: đặt số câu bằng max theo dữ liệu hiện tại.
+- `ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`: di chuyển/chọn option.
 - `Enter` trong quiz:
-  - Neu nut `Cau tiep theo` dang hien, chuyen sang cau tiep theo.
-  - Neu nut `Xac nhan` dang hien, xac nhan dap an.
-  - Neu chua chon dap an, app tu chon option dau tien roi xac nhan.
+  - Nếu nút `Câu tiếp theo` đang hiện, chuyển sang câu tiếp theo.
+  - Nếu nút `Xác nhận` đang hiện, xác nhận đáp án.
+  - Nếu chưa chọn đáp án, app tự chọn option đầu tiên rồi xác nhận.
 
-Ham `isTypingTarget()` giup bo qua phim tat khi nguoi dung dang go trong input/select/textarea.
+Hàm `isTypingTarget()` giúp bỏ qua phím tắt khi người dùng đang gõ trong input/select/textarea.
 
-Luu y voi tab:
+Lưu ý với tab:
 
-- Phim tat quiz chi hoat dong khi `practicePanel` dang hien.
-- Khi dang o tab `Tra cuu bo thu`, `handleKeyboardShortcut()` return som de tranh bam Enter/R/M lam anh huong quiz.
+- Phím tắt quiz chỉ hoạt động khi `practicePanel` đang hiện.
+- Khi đang ở tab `Tra cứu bộ thủ`, `handleKeyboardShortcut()` return sớm để tránh bấm Enter/R/M làm ảnh hưởng quiz.
 
-## 17. Luong tra cuu bo thu
+## 17. Luồng tra cứu bộ thủ
 
-Du lieu bo thu duoc load mot lan khi `DOMContentLoaded`.
+Dữ liệu bộ thủ được load một lần khi `DOMContentLoaded`.
 
-Cac ham lien quan:
+Các hàm liên quan:
 
 - `loadRadicalsData()`
 - `populateRadicalStrokeFilter()`
@@ -766,40 +770,40 @@ Cac ham lien quan:
 - `normalizeSearchText(value)`
 - `getRadicalSearchText(item)`
 
-### 17.1. Tao bo loc so net
+### 17.1. Tạo bộ lọc số nét
 
-Ham:
+Hàm:
 
 ```js
 populateRadicalStrokeFilter()
 ```
 
-Luong xu ly:
+Luồng xử lý:
 
-1. Lay tat ca `strokes` tu `radicalsData`.
-2. Dung `Set` de loai trung.
-3. Sap xep tang dan.
-4. Them cac option vao `radicalsStrokeFilter`.
+1. Lấy tất cả `strokes` từ `radicalsData`.
+2. Dùng `Set` để loại trùng.
+3. Sắp xếp tăng dần.
+4. Thêm các option vào `radicalsStrokeFilter`.
 
-### 17.2. Tim kiem va loc
+### 17.2. Tìm kiếm và lọc
 
-Ham:
+Hàm:
 
 ```js
 getFilteredRadicals()
 ```
 
-Luong xu ly:
+Luồng xử lý:
 
-1. Doc query tu `radicalsSearch`.
-2. Normalize query bang `normalizeSearchText()`:
+1. Đọc query từ `radicalsSearch`.
+2. Normalize query bằng `normalizeSearchText()`:
    - Trim text.
-   - Tach dau tieng Viet bang `NFD`.
-   - Loai combining marks.
-   - Chuyen ve lowercase.
-3. Doc so net tu `radicalsStrokeFilter`.
-4. Loc theo so net neu nguoi dung co chon.
-5. Neu co query, so khop voi chuoi gom:
+   - Tách dấu tiếng Việt bằng `NFD`.
+   - Loại combining marks.
+   - Chuyển về lowercase.
+3. Đọc số nét từ `radicalsStrokeFilter`.
+4. Lọc theo số nét nếu người dùng có chọn.
+5. Nếu có query, so khớp với chuỗi gồm:
    - `id`
    - `radical`
    - `hanViet`
@@ -807,45 +811,45 @@ Luong xu ly:
    - `strokes`
    - `variants`
 
-### 17.3. Render danh sach bo thu
+### 17.3. Render danh sách bộ thủ
 
-Ham:
+Hàm:
 
 ```js
 renderRadicals()
 ```
 
-Luong xu ly:
+Luồng xử lý:
 
-1. Goi `getFilteredRadicals()`.
-2. Xoa noi dung cu trong `radicalsGrid`.
-3. Cap nhat `radicalsCount` theo dang `x / 214 bo`.
-4. Neu khong co ket qua, hien thong bao trong `radicalsMessage`.
-5. Neu co ket qua, render moi item thanh `article.radical-item`.
+1. Gọi `getFilteredRadicals()`.
+2. Xóa nội dung cũ trong `radicalsGrid`.
+3. Cập nhật `radicalsCount` theo dạng `x / 214 bộ`.
+4. Nếu không có kết quả, hiện thông báo trong `radicalsMessage`.
+5. Nếu có kết quả, render mỗi item thành `article.radical-item`.
 
-### 17.4. Event cua tab tra cuu
+### 17.4. Event của tab tra cứu
 
 ```js
 radicalsSearchInput.addEventListener("input", renderRadicals);
 radicalsStrokeFilter.addEventListener("change", renderRadicals);
 ```
 
-## 18. Offline va PWA
+## 18. Offline và PWA
 
-File `manifest.webmanifest` cau hinh app nhu mot PWA:
+File `manifest.webmanifest` cấu hình app như một PWA:
 
-- Ten app: `Kanji Renshuu`.
-- Che do hien thi: `standalone`.
-- Mau nen va theme.
-- Icon 192, 512 va maskable icon.
+- Tên app: `Kanji Renshuu`.
+- Chế độ hiển thị: `standalone`.
+- Màu nền và theme.
+- Icon 192, 512 và maskable icon.
 
-File `sw.js` dung cache name:
+File `sw.js` dùng cache name:
 
 ```js
 kanji-renshuu-v29
 ```
 
-Danh sach app shell duoc cache:
+Danh sách app shell được cache:
 
 - `index.html`
 - `manifest.webmanifest`
@@ -861,144 +865,244 @@ Danh sach app shell duoc cache:
 - `assets/data/kanji-cache.json`
 - `assets/data/radicals.json`
 - `libs/xlsx.full.min.js`
-- Cac icon trong `assets/icons`
+- Các icon trong `assets/icons`
 
-Luong service worker:
+Luồng service worker:
 
 ### Install
 
-1. Mo cache.
-2. Add toan bo app shell vao cache.
-3. Goi `self.skipWaiting()`.
+1. Mở cache.
+2. Add toàn bộ app shell vào cache.
+3. Gọi `self.skipWaiting()`.
 
 ### Activate
 
-1. Lay danh sach cache hien co.
-2. Xoa cac cache cu khac `CACHE_NAME`.
-3. Goi `self.clients.claim()`.
+1. Lấy danh sách cache hiện có.
+2. Xóa các cache cũ khác `CACHE_NAME`.
+3. Gọi `self.clients.claim()`.
 
 ### Fetch
 
-Voi request navigate:
+Với request navigate:
 
-1. Tim `index.html` trong cache truoc.
-2. Neu co cache, tra ve ngay de offline/slow network mo app nhanh hon.
-3. Dong thoi thu fetch ban moi tu network.
-4. Neu fetch thanh cong, cap nhat lai `index.html` trong cache.
-5. Neu chua co cache, moi cho fetch network va fallback ve cache neu fetch fail.
+1. Tìm `index.html` trong cache trước.
+2. Nếu có cache, trả về ngay để offline/slow network mở app nhanh hơn.
+3. Đồng thời thử fetch bản mới từ network.
+4. Nếu fetch thành công, cập nhật lại `index.html` trong cache.
+5. Nếu chưa có cache, mới chờ fetch network và fallback về cache nếu fetch fail.
 
-Voi request GET khac:
+Với request GET khác:
 
-1. Tim trong cache truoc.
-2. Neu co cache, tra cache.
-3. Neu chua co, fetch network.
-4. Neu response hop le, clone response va luu vao cache.
+1. Tìm trong cache trước.
+2. Nếu có cache, trả cache.
+3. Nếu chưa có, fetch network.
+4. Nếu response hợp lệ, clone response và lưu vào cache.
 
-Ngoai service worker, du lieu Kanji con co 2 lop offline rieng:
+Ngoài service worker, dữ liệu Kanji còn có 2 lớp offline riêng:
 
-1. `assets/data/kanji-cache.json`: seed tinh nam trong app shell cache, giup lan dau khong co internet van co du lieu toi thieu.
-2. `localStorage`: cache dong cho du lieu da import/cap nhat tu Google Sheets, URL, Excel hoac CSV.
+1. `assets/data/kanji-cache.json`: seed tĩnh nằm trong app shell cache, giúp lần đầu không có internet vẫn có dữ liệu tối thiểu.
+2. `localStorage`: cache động cho dữ liệu đã import/cập nhật từ Google Sheets, URL, Excel hoặc CSV.
 
-Du lieu bo thu nam trong app shell cache nen co the doc offline sau khi service worker cache thanh cong.
+Dữ liệu bộ thủ nằm trong app shell cache nên có thể đọc offline sau khi service worker cache thành công.
 
-## 19. Luong offline du lieu Kanji
+## 19. Luồng offline dữ liệu Kanji
 
-Khi mo app, `autoLoadDefaultUrl()` chay theo thu tu:
+Khi mở app, `autoLoadDefaultUrl()` chạy theo thứ tự:
 
 ```text
-Mo app
-  -> Thu doc localStorage
-  -> Neu co, dung du lieu da import/cap nhat gan nhat
-  -> Neu khong co, fetch assets/data/kanji-cache.json
-  -> Neu doc duoc JSON, dung seed Kanji di kem app
-  -> Neu JSON cung fail, dung fallbackData trong code
-  -> Neu trinh duyet online, fetch URL mac dinh de cap nhat
-  -> Neu cap nhat thanh cong, ghi du lieu moi vao localStorage
+Mở app
+  -> Thử đọc localStorage
+  -> Nếu có, dùng dữ liệu đã import/cập nhật gần nhất
+  -> Nếu không có, fetch assets/data/kanji-cache.json
+  -> Nếu đọc được JSON, dùng seed Kanji đi kèm app
+  -> Nếu JSON cũng fail, dùng fallbackData trong code
+  -> Nếu trình duyệt online, fetch URL mặc định để cập nhật
+  -> Nếu cập nhật thành công, ghi dữ liệu mới vào localStorage
 ```
 
-Y nghia:
+Ý nghĩa:
 
-- Lan dau mo app khong co internet van co du lieu tu `kanji-cache.json`.
-- Cac lan sau, neu tung import thanh cong, app uu tien du lieu moi trong `localStorage`.
-- File `kanji-cache.json` khong tu thay doi khi app chay. No chi duoc cap nhat khi sua file trong repo.
-- Du lieu tu internet chi tu dong cap nhat vao cache cua browser/localStorage.
+- Lần đầu mở app không có internet vẫn có dữ liệu từ `kanji-cache.json`.
+- Các lần sau, nếu từng import thành công, app ưu tiên dữ liệu mới trong `localStorage`.
+- File `kanji-cache.json` không tự thay đổi khi app chạy. Nó chỉ được cập nhật khi sửa file trong repo.
+- Dữ liệu từ internet chỉ tự động cập nhật vào cache của browser/localStorage.
 
-## 20. Chay project local
+## 20. Chạy project local
 
-Co the chay server local bang:
+Có thể chạy server local bằng:
 
 ```bash
 node dev-server.mjs
 ```
 
-Mac dinh app chay tai:
+Mặc định app chạy tại:
 
 ```text
 http://localhost:8000/
 ```
 
-Neu muon doi port, set bien moi truong `PORT`.
+Nếu muốn đổi port, set biến môi trường `PORT`.
 
-Vi du:
+Ví dụ:
 
 ```bash
 $env:PORT=3000
 node dev-server.mjs
 ```
 
-## 21. Luong tong quat rut gon
+## 21. Luồng tổng quát rút gọn
 
-Toan bo app co the hieu theo pipeline:
+Toàn bộ app có thể hiểu theo pipeline:
 
 ```text
-Mo app
+Mở app
   -> Load theme
-  -> Dong bo mode select
-  -> Mo tab Luyen tap
-  -> Doc localStorage
-  -> Neu chua co thi doc assets/data/kanji-cache.json
-  -> Neu co mang thi cap nhat tu Google Sheets/URL
-  -> Tai du lieu 214 bo thu
-  -> Nguoi dung chon mode, so cau, bai
-  -> Bam bat dau
-  -> Loc du lieu
-  -> Tao quizItems
-  -> Render cau hoi
-  -> Chon dap an
-  -> Xac nhan
-  -> Cham diem
-  -> Cau tiep theo
-  -> Hoan thanh va hien diem
+  -> Đồng bộ mode select
+  -> Mở tab Luyện tập
+  -> Đọc localStorage
+  -> Nếu chưa có thì đọc assets/data/kanji-cache.json
+  -> Nếu có mạng thì cập nhật từ Google Sheets/URL
+  -> Tải dữ liệu 214 bộ thủ
+  -> Người dùng chọn mode, số câu, bài
+  -> Bấm bắt đầu
+  -> Lọc dữ liệu
+  -> Tạo quizItems
+  -> Render câu hỏi
+  -> Chọn đáp án
+  -> Xác nhận
+  -> Chấm điểm
+  -> Câu tiếp theo
+  -> Hoàn thành và hiện điểm
 ```
 
-Voi tab tra cuu bo thu:
+Với tab tra cứu bộ thủ:
 
 ```text
-Mo app
-  -> Tai assets/data/radicals.json
-  -> Tao filter so net
-  -> Render danh sach bo thu
-  -> Nguoi dung bam tab Tra cuu bo thu
-  -> Tim kiem hoac loc so net
-  -> Render lai danh sach ket qua
+Mở app
+  -> Tải assets/data/radicals.json
+  -> Tạo filter số nét
+  -> Render danh sách bộ thủ
+  -> Người dùng bấm tab Tra cứu bộ thủ
+  -> Tìm kiếm hoặc lọc số nét
+  -> Render lại danh sách kết quả
 ```
 
-## 22. Ghi chu ky thuat
+## 22. Ghi chú kỹ thuật
 
-- Logic JavaScript da duoc chia theo module trong `assets/js`.
-- `assets/js/app.js` chi nen giu vai tro entrypoint/orchestration, tranh dua them logic domain lon vao day.
-- App khong dung framework frontend.
-- App doc Excel bang thu vien `XLSX` trong `assets/js/data.js`.
-- App doc CSV bang parser tu viet trong `assets/js/data.js`.
-- App co 3 lop offline:
+- Logic JavaScript đã được chia theo module trong `assets/js`.
+- `assets/js/app.js` chỉ nên giữ vai trò entrypoint/orchestration, tránh đưa thêm logic domain lớn vào đây.
+- App không dùng framework frontend.
+- App đọc Excel bằng thư viện `XLSX` trong `assets/js/data.js`.
+- App đọc CSV bằng parser tự viết trong `assets/js/data.js`.
+- App có 3 lớp offline:
   - Service worker cache app shell.
-  - `assets/data/kanji-cache.json` lam seed tinh cho du lieu Kanji.
-  - `localStorage` cache du lieu Kanji da import/cap nhat.
-- Du lieu 214 bo thu duoc luu trong repo tai `assets/data/radicals.json` va duoc cache bang service worker.
-- Browser khong the tu ghi nguoc vao `assets/data/kanji-cache.json`; neu can cap nhat file nay can sua repo hoac dung script ngoai browser.
-- Khi them file JS module moi, can them file do vao `APP_SHELL` trong `sw.js` de PWA offline khong bi thieu dependency.
-- Giao dien co 2 tab rieng:
-  - `practicePanel`: luyen tap.
-  - `radicalsPanel`: tra cuu bo thu.
-- Nut `Lam lai` dang reset ca data va tai lai tu URL, khong chi reset quiz.
-- Mot so chu tieng Viet/Kanji trong file co dau hieu bi loi encoding khi doc bang PowerShell. Neu sua text UI, nen dam bao file duoc luu bang UTF-8.
+  - `assets/data/kanji-cache.json` làm seed tĩnh cho dữ liệu Kanji.
+  - `localStorage` cache dữ liệu Kanji đã import/cập nhật.
+- Dữ liệu 214 bộ thủ được lưu trong repo tại `assets/data/radicals.json` và được cache bằng service worker.
+- Browser không thể tự ghi ngược vào `assets/data/kanji-cache.json`; nếu cần cập nhật file này cần sửa repo hoặc dùng script ngoài browser.
+- Khi thêm file JS module mới, cần thêm file đó vào `APP_SHELL` trong `sw.js` để PWA offline không bị thiếu dependency.
+- Giao diện có 2 tab riêng:
+  - `practicePanel`: luyện tập.
+  - `radicalsPanel`: tra cứu bộ thủ.
+- Nút `Làm lại` đang reset cả data và tải lại từ URL, không chỉ reset quiz.
+- Một số chữ tiếng Việt/Kanji trong file có dấu hiệu bị lỗi encoding khi đọc bằng PowerShell. Nếu sửa text UI, nên đảm bảo file được lưu bằng UTF-8.
+
+## 23. Từ điển Kanji và Gửi Sheets (Dictionary & Apps Script)
+
+App tích hợp module từ điển trong `assets/js/dictionary.js`.
+
+### 23.1. Luồng tra cứu và Autocomplete
+
+Hàm xử lý nhập liệu:
+
+```js
+handleDictSearchInput(e)
+```
+
+Luồng xử lý:
+
+1. Người dùng gõ vào ô tìm kiếm `dictSearchInput`.
+2. App thực hiện tìm kiếm local tức thì bằng `searchLocal(query)`, lọc trong dữ liệu bộ thủ và dữ liệu Kanji đang có. Hiển thị ngay lên dropdown.
+3. Đồng thời debouncing (300ms) gọi API `searchMazii(query)`.
+4. Khi API trả về, dùng `mergeResults(local, api)` để gộp và ưu tiên hiển thị kết quả API.
+5. Hiển thị dropdown qua `renderAutocomplete()`.
+6. Khi người dùng click chọn 1 kết quả, gọi `openDictionary(selectedKanji)`.
+
+### 23.2. Luồng hiển thị Kanji chi tiết
+
+Hàm chính:
+
+```js
+openDictionary(kanji)
+```
+
+Luồng xử lý:
+
+1. Mở modal `kanjiDictModal`.
+2. Nếu có truyền `kanji`, hiển thị UI loading `renderLoadingState()`.
+3. Lưu vào lịch sử `dictHistory` để hỗ trợ nút Quay lại. Cập nhật trạng thái hiển thị của `dictBackBtn`.
+4. Gọi `lookupKanji(kanji)`:
+   - Kiểm tra `lookupCache`, nếu có trả về ngay.
+   - Nếu không, gọi `fetchFromMazii(kanji)`.
+   - Nếu Mazii API lỗi, gọi fallback `fetchFromKanjiApi(kanji)`.
+   - Lưu kết quả vào `lookupCache`.
+5. Gọi `setCurrentKanjiData(data)` để lưu state hiện tại cho việc Thêm vào Sheets.
+6. Gọi `renderDictionaryContent(data)` để vẽ UI chi tiết (âm Hán, nét vẽ, bộ thủ, từ vựng).
+7. Gắn event cho nút `dictPlayStrokeBtn` để gọi `playKanjiGuide(kanji)` (vẽ hoạt ảnh nét chữ).
+
+### 23.3. Luồng thêm Kanji vào Sheets
+
+Khi bấm nút Thêm, app gọi:
+
+```js
+openAddKanjiModal()
+```
+
+Luồng xử lý:
+
+1. Lấy thông tin từ `currentKanjiData`.
+2. Điền sẵn các field chữ Kanji và Âm Hán Việt vào `kanjiAddModal`.
+3. Người dùng nhập "Bài số mấy" và "Cách nhớ".
+4. Bấm gửi, app gọi `submitAddKanji()`.
+
+Bên trong `submitAddKanji()`:
+
+1. Đọc `appsScriptUrlInput` từ giao diện (đã lưu trong `localStorage`). Nếu trống, báo lỗi.
+2. Kiểm tra input bắt buộc (Bài số mấy).
+3. Tạo query string `?lesson=...&kanji=...&hanviet=...&mnemonic=...`.
+4. Dùng `fetch()` gửi GET request đến URL Google Apps Script.
+5. Nhận JSON response từ Sheets:
+   - Nếu `status === "exists"`, báo chữ Kanji đã tồn tại.
+   - Nếu `status === "success"`, báo thêm thành công và tự động đóng modal sau 1.5s.
+6. Xử lý lỗi catch và hiển thị lên `kanjiAddStatus`.
+
+## 24. Bảng vẽ Kanji (Whiteboard)
+
+Tính năng bảng vẽ nằm trong `assets/js/whiteboard.js` để giúp người dùng tự viết tay chữ Hán.
+
+### 24.1. Luồng Bật/Tắt
+
+- Nhấn phím `W` trong quiz, hàm `handleKeyboardShortcut` bắt sự kiện và gọi `toggleWhiteboard()`.
+- Lần đầu mở, hàm `initWhiteboard()` gắn các event `pointerdown`, `pointermove`, `pointerup` vào canvas.
+- Bắt đầu render loop bằng `startRenderLoop()`.
+
+### 24.2. Luồng vẽ nét (Drawing Loop)
+
+Để đảm bảo hiệu năng cao trên mobile/tablet, Whiteboard dùng `requestAnimationFrame`:
+
+1. **pointerdown**: Lấy tọa độ chuột/cảm ứng, cập nhật `isDrawing = true`, gọi `saveSnapshot()` để lưu trạng thái canvas hiện tại vào mảng `undoStack` (tối đa 30 bước).
+2. **pointermove**: Nếu `isDrawing`, đưa tọa độ mới vào mảng `pendingPoints` và set cờ `needsRender = true`.
+3. **renderLoop (rAF)**: Chạy liên tục theo refresh rate của màn hình.
+   - Nếu `needsRender` và có `pendingPoints`, rút các điểm ra.
+   - Dùng hàm `smooth()` tính toán đường cong Bézier để làm mềm các góc cạnh (smoothing).
+   - Gọi `ctx.lineTo()` và `ctx.stroke()` để vẽ mực lên canvas.
+4. **pointerup**: Đặt `isDrawing = false`.
+
+### 24.3. Luồng Undo
+
+Khi người dùng bấm `Ctrl + Z`:
+
+1. Bắt sự kiện trong `handleKeyboardShortcut`.
+2. Gọi `whiteboardUndo()`.
+3. Lấy `ImageData` cuối cùng từ `undoStack`.
+4. Vẽ lại lên canvas bằng `ctx.putImageData()`.
